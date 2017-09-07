@@ -10,8 +10,9 @@ def constructor(eid, etype, model):
 
     """
     if etype == 3:
-        if eid in model.enriched_elements:
-            return Quad4Enr(eid, model)
+        if model.xfem is not None:
+            if eid in model.xfem.enr_elements:
+                return Quad4Enr(eid, model)
         else:
             return Quad4(eid, model)
     else:

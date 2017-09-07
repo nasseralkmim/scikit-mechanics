@@ -25,7 +25,3 @@ class Mesh(object):
     """
     def __init__(self, mesh_file):
         self.nodes, self.elements = parse_msh(mesh_file)
-
-
-if __name__ == '__main__':
-    msh = Mesh('../../examples/patch.msh')

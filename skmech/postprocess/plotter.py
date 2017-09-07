@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-from elastopy.postprocess import draw
-from elastopy import stress
+from . import draw
+from .. import stress
 import matplotlib.animation as animation
 import numpy as np
 

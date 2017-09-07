@@ -3,6 +3,7 @@
 """
 import numpy as np
 from .quad4 import Quad4
+from .. import quadrature
 
 
 class Quad4Enr(Quad4):
@@ -10,39 +11,125 @@ class Quad4Enr(Quad4):
 
     Uses methods of the standard Quad4 element.
 
-    Args:
-        eid: element index
-        model: object with model parameters
-        eps0: element inital strain array shape [3]
+    Parameters
+    ----------
+    eid : int
+        element index.
+    model : Model
+        object instance of skmech.model.Model() with model parameters.
+    eps0: element inital strain array shape (3)
 
-    Attributes:
-        phi (numpy array): nodal value for the signed distance function
-            of this element
-        num_enr_nodes (int): number of enriched nodes of this element
-        num_enr_dof (int): number of enriched degree`s of freedom in this
-            element.
+    Attributes
+    ----------
+    num_enr_nodes : int
+        number of enriched nodes of this element
+    num_enr_dof : list of ndarray
+        number of enriched degree`s of freedom in this element.
+    zerolevelset : dict
+        dictionary with zerolevelset object with attributes: phi, enr_nodes,
+        enr_element.
+
     """
-    def __init__(self, eid, model, EPS0):
-        # initialize Quad4 standard
-        super().__init__(eid, model, EPS0)
+    def __init__(self, eid, model, EPS0=None):
+        self.eid = eid
+        self.mesh = model.mesh
+        self.num_quad_points = model.num_quad_points[eid]
+        self.num_dof = model.num_dof
+
+        self.zerolevelset = model.xfem.zls
+        self.conn = self._get_connectivity(model.elements)
+        self.enr_nodes = self._get_enriched_nodes(self.conn)
+        self.xyz = self._get_nodes_coordinates(model.mesh.nodes)
+        self.E, self.nu = self._get_material(model.material)
+        self.gauss = quadrature.Quadrilateral(self.num_quad_points)
+        self.dof = self._get_dof(model.nodes_dof)
+        self.id_m, self.id_v = self._get_incidence()
+        self.num_nodes = len(self.conn)
+        self.thickness = model.thickness
+
+        self.num_std_dof = 2 * len(self.conn)        # FOR QUAD ONLY
+        self.num_enr_dof = len(self.dof) - self.num_std_dof
+
+    # TODO: numbering of nodes in element DONE
+    def _get_dof(self, nodes_dof):
+        """get dof list from connectivity nodes tag
+
+        Note:
+        ----
+        Overwrites Quad4 method, need to ensure right order of dof numbering.
+        first the standard dof and then the enriched
+
+        Each zerolevelset enriched nodes determine the dof numbering order.
+        The enriched node order is sorted for each zero level set due numpy
+        intersect1d function.
+
+        """
+        # standard dof
+        dof = []
+        for nid in self.conn:
+            dof.extend(nodes_dof[nid])
+
+        for zls in self.zerolevelset.values():
+            for nid in np.intersect1d(zls.enr_nodes, self.conn):
+                dof.extend(zls.enr_node_dof[nid])
+
+        return dof
+
+    def _get_material(self, material):
+        """Get material parameters for enriched element
+
+        Returns
+        -------
+        array like
+            Material parameters for each node in element
+
+        """
+        conn = np.array(self.conn) - 1  # adjust nodes id to access phi
+
+        # add value for matrix material
+        E = [material.E[1]] * 4
+        nu = [material.nu[1]] * 4
+
+        for _, zls in self.zerolevelset.items():
+            # if phi is negative material property from reinforcement
+            for j in np.where(zls.phi[conn] < 0)[0]:
+                E[j] = material.E[-1]
+                nu[j] = material.nu[-1]
+        return E, nu
+
+
+    def _get_enriched_nodes(self, conn):
+        """Get element enriched nodes for each level set
+
+        Returns
+        -------
+        list of ndarray
+            list with sorted enriched nodes for each level set
+
+        """
+        enr_nodes = []
+        for _, zls in self.zerolevelset.items():
+            enr_nodes.append(np.intersect1d(zls.enr_nodes, conn))
+        return enr_nodes
 
     def stiffness_matrix(self, t=1):
         """Build the enriched element stiffness matrix
 
-        Note:
-            This method overwrites the Quad4 method
+        Note
+        ----
+        This method overwrites the Quad4 method
 
         """
         kuu = np.zeros((self.num_std_dof, self.num_std_dof))
         kaa = np.zeros((self.num_enr_dof, self.num_enr_dof))
         kua = np.zeros((self.num_std_dof, self.num_enr_dof))
 
-        for w, gp in zip(self.gauss_quad.weights, self.gauss_quad.points):
+        for w, gp in zip(self.gauss.weights, self.gauss.points):
             N, dN_ei = self.shape_function(xez=gp)
             dJ, dN_xi, _ = self.jacobian(self.xyz, dN_ei)
 
             C = self.c_matrix(N, t)
-            Bstd = self.standard_gradient_operator(dN_xi)
+            Bstd = self.gradient_operator(dN_xi)
             Benr = self.enriched_gradient_operator(N, dN_xi)
 
             kuu += w*(Bstd.T @ C @ Bstd)*dJ
@@ -56,49 +143,33 @@ class Quad4Enr(Quad4):
     def enriched_gradient_operator(self, N, dN_xi):
         """Build the enriched gradient operator
 
-        Args:
-            dN_xi: derivative of shape functions with respect to cartesian
-                coordinates
+        Parameters
+        ----------
+        dN_xi : ndarray
+            derivative of shape functions with respect to cartesian
+            coordinates
 
-        Returns:
-            numpy array shape (3 x (num_enr_dof))
+        Returns
+        -------
+        ndarray
+            the discretized enriched gradient operator shape(3,(num_enr_dof))
 
-        Note:
-            The order of this matrix is defined by the order in the
-            element.dof.
-
-            For instance, (example in the test_quad4enr)
-
-                element[1].dof =  [2, 3, 10, 11, 8, 9, 4, 5,  # std
-                                   14, 15, 16, 17,  # first zls
-                                   20, 21, 22, 23, 24, 25, 26, 27]  # 2nd  zls
-
-            which is an element enriched by two zero level set. In this case,
-            the gradient operator, B, should follow this order.
-            The attribute enriched dof for each level set keeps track of those
-            dof:
-
-                model.zerolevelset[0].enriched_dof[1] = [14, 15, 16, 17]
-                model.zerolevelset[1].enriched_dof[1] = [20, 21, 22, 23,
-                                                         24, 25, 26, 27]
-
-            The, we need to know which nodes those dof are refering to in the
-            local index. This are stored in element enriched node,
-
-                element[1].enriched_nodes[0] = [1, 2]  # for 1st zls
-                element[1].enriched_nodes[1] = [1, 2, 4, 5]  # for 2nd zls
+        Note
+        ----
+        The order of this matrix is defined by the order in the
+        element.dof.
 
         """
         # dof = [std dofs, dofs zls[0], dofs zls[1] ... ]
         # loop for each zero level set
         Benr_zls = {}   # Benr for each zerp level est
-        for ind, zls in enumerate(self.zerolevelset):
+        for zid, zls in self.zerolevelset.items():
             # signed distance for nodes in this element for this zls
             phi = zls.phi[self.conn]  # phi with local index
 
             Bk = {}         # Bk for k enriched nodes
             # enriched nodes [[nodes for the first level set], [for 2nd]]
-            for n in self.enriched_nodes[ind]:
+            for n in self.enr_nodes[zid]:
                 # enriched_nodes is sorted
                 # if conn = [1, 4, 7, 2] and n = 4 then j = 1
                 j = self.global2local_index(n)  # local index
@@ -115,8 +186,8 @@ class Quad4Enr(Quad4):
                                    dN_xi[0, j]*(psi) + N[j]*dpsi_x]])
 
             # Arrange Benr based on the element.enriched_nodes
-            Benr_zls[ind] = np.block([Bk[i]
-                                      for i in self.enriched_nodes[ind]])
+            Benr_zls[zid] = np.block([Bk[i]
+                                      for i in self.enr_nodes[zid]])
 
         # arrange Benr based on zls order
         Benr = np.block([Benr_zls[i]
@@ -190,7 +261,8 @@ class Quad4Enr(Quad4):
         Note:
             This method overwrites the Quad4 method
 
-        Args:
+        Parameters
+        ----------
             traction_bc (dict): dictionary with boundary conditions with the
                 format: traction_bc = {line_tag: [vector_x, vector_y]}.
         """

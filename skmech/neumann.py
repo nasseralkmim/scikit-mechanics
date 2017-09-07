@@ -6,8 +6,8 @@ def neumann(model):
     """Creates an equivalent nodal load with traction boundary condition
 
     """
+    Pt = np.zeros(model.num_dof)
     if model.traction is not None:
-        Pt = np.zeros(model.num_dof)
         for t_location, t_vector in model.traction.items():
             physical_element = model.get_physical_element(t_location)
             if len(physical_element) == 0:

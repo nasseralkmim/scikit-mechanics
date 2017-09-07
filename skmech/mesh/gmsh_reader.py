@@ -34,10 +34,9 @@ def parse_msh(mesh_file):
                 num_nodes = int(line_nodes)
                 for _ in range(num_nodes):
                     data = f.readline()
-                    node_index = int(data[0])
-                    nodes[node_index] = np.fromstring(data[1:],
-                                                      dtype=np.float64,
-                                                      sep=' ')
+                    tags = np.fromstring(data, dtype=int, sep=' ')
+                    node_index = int(tags[0])
+                    nodes[node_index] = tags[1:]
             if section == '$Elements':
                 line_ele = f.readline()
                 num_ele = int(line_ele)
@@ -47,8 +46,3 @@ def parse_msh(mesh_file):
                     ele_index = int(tags[0])
                     elements[ele_index] = tags[1:]
     return nodes, elements
-
-
-if __name__ is '__main__':
-    n, e = parse_msh('../../examples/patch.msh')
-    print(e)

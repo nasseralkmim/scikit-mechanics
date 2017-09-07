@@ -24,7 +24,7 @@ class Quad4(Element):
         self.xyz = self._get_nodes_coordinates(model.mesh.nodes)
         self.E, self.nu = self._get_material(model.material)
         self.gauss = quadrature.Quadrilateral(self.num_quad_points)
-        self.dof = self._get_dof(model.num_dof_node)
+        self.dof = self._get_dof(model.nodes_dof)
         self.id_m, self.id_v = self._get_incidence()
         self.num_nodes = len(self.conn)
         self.thickness = model.thickness
@@ -34,17 +34,16 @@ class Quad4(Element):
         dof = np.array(self.dof) - 1  # numpy starts at 0
         return np.ix_(dof, dof), dof
 
-    def _get_dof(self, num_dof_node):
+    def _get_dof(self, nodes_dof):
         """get dof list from connectivity nodes tag"""
         dof = []
-        for n in self.conn:
-            dof.extend([(n * num_dof_node - 1) + i
-                        for i in range(num_dof_node)])
+        for nid in self.conn:
+            dof.extend(nodes_dof[nid])
         return dof
 
     def _get_nodes_coordinates(self, nodes):
         """get element nodes coordinates"""
-        return np.array([nodes[n][:2] for n in self.conn])
+        return np.array([nodes[nid][:2] for nid in self.conn])
 
     def _get_material(self, material):
         """get material property"""
@@ -53,8 +52,8 @@ class Quad4(Element):
             nu = material.nu[self.physical_surf]
             return E, nu
         except (AttributeError, KeyError) as err:
-            raise Exception('Check if physical surface {} has E and nu \
-            material property'.format(self.physical_surf))
+            raise Exception('Check if physical surface {} has E and nu'
+                            'material property'.format(self.physical_surf))
 
     def _get_connectivity(self, elements):
         """Get element connectivity from gmsh elements"""
@@ -181,12 +180,12 @@ class Quad4(Element):
         x1, x2 = N @ xyz
         return x1, x2
 
-    def global2local_index(self, n):
+    def global2local_index(self, nid):
         """Returns local index from global node index
 
         Parameters
         ----------
-        n : int
+        nid : int
             global index value for node
 
         Returns
@@ -207,7 +206,7 @@ class Quad4(Element):
         Maybe is better to put this function on master element class
 
         """
-        ind = np.where(np.array(self.conn) == n)[0][0]
+        ind = np.where(np.array(self.conn) == nid)[0][0]
         return ind
 
     def jacobian(self, xyz, dN_ei):

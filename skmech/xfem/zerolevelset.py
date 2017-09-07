@@ -2,26 +2,35 @@
 import numpy as np
 
 
-class Create(object):
-    """creates the zero level set object with its attributes
+class ZeroLevelSet(object):
+    """Creates the zero level set object with its attributes
 
-    Args:
-        region (func(x, y) or list of tuples): region that defines the level
-            set the zero level set defines the discontinuity interface. Or
-            list of tuples with (xc, yc, r) of circles.
-        x_domain (list): domian defined by (x_domain[0], x_domain[1])
-        y_domain (list): same as x
-        num_div (float, optional): number of division for defining the
-            level set, the greater the value more precisa the interface
-            will be defined
+    Parameters
+    ----------
+    region : func(x, y) or list of tuples
+        region that defines the level
+        set the zero level set defines the discontinuity interface. Or
+        list of tuples with (xc, yc, r) of circles.
+    x_domain : list
+        domian defined by (x_domain[0], x_domain[1]).
+    y_domain : list
+        same as x.
+    num_div : float, optional
+        number of division for defining the
+        level set, the greater the value more precisa the interface
+        will be defined.
 
-    Attributes:
-        grid_x (numpy array): 2d array shape (num_div, num_div)
-            with grid value for x direction
-        grid_y (numpy array): same as x for y direction
-        mask_ls (numpy array): 2d array shape (num_div, num_div) with
-            -1 and 1 where the points between these two values define the
-            discontinuity interface.
+    Attributes
+    ----------
+    grid_x : numpy array
+        2d array shape (num_div, num_div)
+        with grid value for x direction.
+    grid_y : numpy array
+        same as x for y direction
+    mask : numpy array
+        2d array shape (num_div, num_div) with
+        -1 and 1 where the points between these two values define the
+        discontinuity interface.
 
     """
     def __init__(self, region, x_domain, y_domain, num_div=50,
@@ -47,7 +56,7 @@ class Create(object):
 
         # be careful with 0 division, converting it to 0.
         with np.errstate(divide='ignore', invalid='ignore'):
-            self.mask_ls = np.nan_to_num(ls/abs(ls))
+            self.mask = np.nan_to_num(ls/abs(ls))
 
         if material is not None:
             self.material = material
@@ -55,17 +64,17 @@ class Create(object):
 
 if __name__ == '__main__':
     # def func(x, y):
-    #     return (x - 2)**2 + (y - 2)**2 - 1.8**2
-    # z_ls = Create(func, [0, 2], [0, 2], num_div=3)
-    # print(z_ls.mask_ls)
+    #     return (x - 2)* + (y - 2)**2 - 1.8**2
+    # z_ls = ZeroLevelSet(func, [0, 2], [0, 2], num_div=3)
+    # print(z_ls.mask)
     # [[ 1.  1.  1.]
     #  [ 1. -1. -1.]
     #  [ 1. -1. -1.]]
-    # z_ls = Create([(1, 1, .2),
+    # z_ls = ZeroLevelSet([(1, 1, .2),
     #                (2, 2, .2),
     #                (.2, 1.5, .5)],
     #               [0, 2], [0, 2], num_div=10)
-    # print(z_ls.mask_ls)
+    # print(z_ls.mask)
     # [[ 1.  1.  1.  1.  1.  1.  1.  1.  1. -1.]
     #  [-1. -1. -1.  1.  1.  1.  1.  1.  1.  1.]
     #  [-1. -1. -1. -1.  1.  1.  1.  1.  1.  1.]
@@ -81,8 +90,8 @@ if __name__ == '__main__':
     r = np.random.randn(samplesize) / 10.  # normal dist
     c = np.random.uniform(0, 2, size=(samplesize, 2))
     region = [(xc, yc, ri) for [xc, yc], ri in zip(c, r)]
-    z_ls = Create(region, [0, 2], [0, 2], num_div=10)
-    print(z_ls.mask_ls)
+    z_ls = ZeroLevelSet(region, [0, 2], [0, 2], num_div=10)
+    print(z_ls.mask)
     import matplotlib.pyplot as plt
-    plt.imshow(z_ls.mask_ls)
+    plt.imshow(z_ls.mask)
     plt.show()
