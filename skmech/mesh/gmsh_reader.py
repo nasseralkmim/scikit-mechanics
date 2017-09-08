@@ -34,7 +34,7 @@ def parse_msh(mesh_file):
                 num_nodes = int(line_nodes)
                 for _ in range(num_nodes):
                     data = f.readline()
-                    tags = np.fromstring(data, dtype=int, sep=' ')
+                    tags = np.fromstring(data, dtype=float, sep=' ')
                     node_index = int(tags[0])
                     nodes[node_index] = tags[1:]
             if section == '$Elements':
