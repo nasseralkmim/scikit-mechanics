@@ -97,7 +97,6 @@ class Quad4Enr(Quad4):
                 nu[j] = material.nu[-1]
         return E, nu
 
-
     def _get_enriched_nodes(self, conn):
         """Get element enriched nodes for each level set
 
@@ -165,7 +164,8 @@ class Quad4Enr(Quad4):
         Benr_zls = {}   # Benr for each zerp level est
         for zid, zls in self.zerolevelset.items():
             # signed distance for nodes in this element for this zls
-            phi = zls.phi[self.conn]  # phi with local index
+            conn = np.array(self.conn) - 1  # adjust nodes id to access phi
+            phi = zls.phi[conn]  # phi with local index
 
             Bk = {}         # Bk for k enriched nodes
             # enriched nodes [[nodes for the first level set], [for 2nd]]
@@ -175,15 +175,15 @@ class Quad4Enr(Quad4):
                 j = self.global2local_index(n)  # local index
                 psi = abs(N @ phi) - abs(phi[j])
 
-                dpsi_x = np.sign(N @ phi)*(dN_xi[0, :] @ phi)
-                dpsi_y = np.sign(N @ phi)*(dN_xi[1, :] @ phi)
+                dpsi_x = np.sign(N @ phi) * (dN_xi[0, :] @ phi)
+                dpsi_y = np.sign(N @ phi) * (dN_xi[1, :] @ phi)
 
                 # store Bk using node index
                 # but use local index to access phi, N, dN_xi
-                Bk[n] = np.array([[dN_xi[0, j]*(psi) + N[j]*dpsi_x, 0],
-                                  [0, dN_xi[1, j]*(psi) + N[j]*dpsi_y],
-                                  [dN_xi[1, j]*(psi) + N[j]*dpsi_y,
-                                   dN_xi[0, j]*(psi) + N[j]*dpsi_x]])
+                Bk[n] = np.array([[dN_xi[0, j] * (psi) + N[j] * dpsi_x, 0],
+                                  [0, dN_xi[1, j] * (psi) + N[j] * dpsi_y],
+                                  [dN_xi[1, j] * (psi) + N[j] * dpsi_y,
+                                   dN_xi[0, j] * (psi) + N[j] * dpsi_x]])
 
             # Arrange Benr based on the element.enriched_nodes
             Benr_zls[zid] = np.block([Bk[i]
