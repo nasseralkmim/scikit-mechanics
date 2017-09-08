@@ -23,7 +23,7 @@ def neumann(model):
                     d = np.linalg.norm(dxyz)
                     pt = d * np.array(t_vector) / 2
                     dof1 = np.array(model.nodes_dof[n1]) - 1  # starts at 0
-                    dof2 = np.array(model.nodes_dof[n2]) - 1  #  starts at 0
+                    dof2 = np.array(model.nodes_dof[n2]) - 1  # starts at 0
                     Pt[dof1] += pt
                     Pt[dof2] += pt
     return Pt

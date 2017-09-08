@@ -24,13 +24,12 @@ class Xfem(object):
         namely: phi, enriched_nodes and enriched elements
 
     """
-    def __init__(self, nodes, elements, zerolevelset, material,
-                 nodes_dof, num_dof):
+    def __init__(self, nodes, elements, zerolevelset, material):
         self.xfem = True
         self.nodes = nodes
         self.elements = elements
         self.material = material
-        self.num_dof = num_dof
+        self.num_dof = len(nodes) * 2
 
         # extract nodes coordinates for 2D as array
         xyz = np.array(list(nodes[n][:2] for n in nodes.keys()))

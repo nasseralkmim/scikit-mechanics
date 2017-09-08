@@ -57,8 +57,7 @@ class Model(object):
             self.xfem = None
         else:
             self.xfem = Xfem(self.nodes, self.elements,
-                             zerolevelset, material,
-                             self.nodes_dof, self.num_dof)
+                             zerolevelset, material)
 
     def get_physical_element(self, physical_element):
         """get physical line element

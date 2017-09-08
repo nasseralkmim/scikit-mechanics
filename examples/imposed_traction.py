@@ -1,6 +1,5 @@
 import skmech
 import matplotlib.pyplot as plt
-import meshplotlib as mshplt
 
 
 class Mesh():
@@ -39,6 +38,6 @@ mat = skmech.Material(E={11: 1000}, nu={11: 0.3})
 model = skmech.Model(msh, material=mat, displacement=displ, traction=traction)
 u = skmech.statics.solver(model)
 fig, ax = plt.subplots()
-mshplt.plot.geometry(model.nodes, model.elements, ax)
-mshplt.plot.deformed(model.nodes, model.elements, u, ax, magf=100)
+skmech.plot.geometry(model.nodes, model.elements, ax)
+skmech.plot.deformed(model.nodes, model.elements, u, ax, magf=100)
 plt.show()

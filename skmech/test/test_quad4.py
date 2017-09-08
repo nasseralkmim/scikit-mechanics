@@ -31,18 +31,19 @@ msh.elements = {
     11: [3, 2, 11, 10, 9, 6, 3, 7],
     12: [3, 2, 11, 10, 8, 9, 7, 4]
 }
-MATERIAL = skmech.Material(E={11: 10000}, nu={11: 0.3})
-TRACTION = {5: (-1, 0), 7: (1, 0)}
-DISPLACEMENT = {12: (0, 0), 13: (None, 0)}
-MODEL = skmech.Model(
+material = skmech.Material(E={11: 10000}, nu={11: 0.3})
+traction = {5: (-1, 0), 7: (1, 0)}
+displacement = {12: (0, 0), 13: (None, 0)}
+model = skmech.Model(
     msh,
-    material=MATERIAL,
-    traction=TRACTION,
-    displacement=DISPLACEMENT,
+    material=material,
+    traction=traction,
+    displacement=displacement,
     num_quad_points=2)
 
+
 def test_tractionbc():
-    Pt = skmech.neumann(TRACTION, MODEL)
+    Pt = skmech.neumann(model)
     assert list(Pt) == [
         -0.25, 0., 0.25, 0., 0.25, 0., -0.25, 0., 0., 0., 0.5, 0., 0., 0.,
         -0.5, 0., 0., 0.
@@ -51,8 +52,8 @@ def test_tractionbc():
 
 def test_stiffness():
     K = 0
-    for eid, [etype, *_] in MODEL.elements.items():
-        ele = skmech.constructor(eid, etype, MODEL)
+    for eid, [etype, *_] in model.elements.items():
+        ele = skmech.constructor(eid, etype, model)
         k = ele.stiffness_matrix()
         K += k
     assert np.round(np.linalg.norm(K), 2) == 52268.5
@@ -65,11 +66,11 @@ def test_gradient_operator():
     msh = Mesh()
     msh.nodes = {1: [0, 0, 0], 2: [6, 0, 0], 3: [8, 6, 0], 4: [2, 6, 0]}
     msh.elements = {1: [3, 2, 0, 0, 1, 2, 3, 4]}
-    MATERIAL = skmech.MATERIAL.Material(E={0: 10000}, nu={0: 0.2})
-    MODEL = skmech.MODEL.Model(msh, MATERIAL, num_quad_points=2)
+    material = skmech.material.Material(E={0: 10000}, nu={0: 0.2})
+    model = skmech.model.Model(msh, material, num_quad_points=2)
 
-    for eid, [etype, *_] in MODEL.elements.items():
-        ele = skmech.constructor(eid, etype, MODEL)
+    for eid, [etype, *_] in model.elements.items():
+        ele = skmech.constructor(eid, etype, model)
         N, dN_ei, dJ, dN_xi, B = {}, {}, {}, {}, {}
         k = 0
         for i, (w, gp) in enumerate(zip(ele.gauss.weights, ele.gauss.points)):
@@ -102,17 +103,18 @@ def test_neumann():
     msh = Mesh()
     msh.nodes = {1: [0, 0, 0], 2: [14, 0, 0], 3: [6, 6, 0], 4: [0, 6, 0]}
     msh.elements = {1: [1, 2, 5, 4, 2, 3], 2: [3, 2, 0, 0, 1, 2, 3, 4]}
-    MATERIAL = skmech.Material(E={0: 10000}, nu={0: 0.2})
-    MODEL = skmech.Model(msh, MATERIAL, num_quad_points=2)
-    TRACTION = {5: (3 / 5, 4 / 5)}
-    Pt = skmech.neumann(TRACTION, MODEL)
+    mat = skmech.Material(E={0: 10000}, nu={0: 0.2})
+    trac = {5: (3 / 5, 4 / 5)}
+    model = skmech.Model(mesh=msh, material=mat, traction=trac,
+                         num_quad_points=2)
+    Pt = skmech.neumann(model)
     assert list(Pt) == [0., 0., 3., 4., 3., 4., 0., 0.]
 
 
 def test_dirichlet():
-    K = np.ones((MODEL.num_dof, MODEL.num_dof))
-    F = np.ones(MODEL.num_dof)
-    Km, Fm = skmech.dirichlet(K, F, MODEL)
+    K = np.ones((model.num_dof, model.num_dof))
+    F = np.ones(model.num_dof)
+    Km, Fm = skmech.dirichlet(K, F, model)
     assert Km[0, 0] == 1
     assert Km[1, 1] == 1
     assert Fm[0] == 0
