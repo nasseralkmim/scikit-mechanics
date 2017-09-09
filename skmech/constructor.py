@@ -13,6 +13,17 @@ def constructor(eid, etype, model):
         if model.xfem is not None:
             if eid in model.xfem.enr_elements:
                 return Quad4Enr(eid, model)
+            else:
+                # catch non enriched elements
+                # update element material for matrix or reinforcement
+                phy_surf = model.elements[eid][2]
+                if eid in model.xfem.element_material['reinforcement']:
+                    model.material.E[phy_surf] = model.xfem.material.E[-1]
+                    model.material.nu[phy_surf] = model.xfem.material.nu[-1]
+                elif eid in model.xfem.element_material['matrix']:
+                    model.material.E[phy_surf] = model.xfem.material.E[1]
+                    model.material.nu[phy_surf] = model.xfem.material.nu[1]
+                return Quad4(eid, model)
         else:
             return Quad4(eid, model)
     else:

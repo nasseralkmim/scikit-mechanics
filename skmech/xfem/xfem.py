@@ -31,6 +31,9 @@ class Xfem(object):
         self.material = material
         self.num_dof = len(nodes) * 2
 
+        # if element is in matrix or reinforcement area
+        self.element_material = {'matrix': [], 'reinforcement': []}
+
         # extract nodes coordinates for 2D as array
         xyz = np.array(list(nodes[n][:2] for n in nodes.keys()))
 
