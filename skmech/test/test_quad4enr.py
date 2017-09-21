@@ -200,15 +200,18 @@ def test_dof3():
            skmech.xfem.ZeroLevelSet(func2, [0, 2], [0, 2], num_div=50),
            skmech.xfem.ZeroLevelSet(func3, [0, 2], [0, 2], num_div=50),
            skmech.xfem.ZeroLevelSet(func4, [0, 2], [0, 2], num_div=50)]
+    # -1 is reinforcement, 1 is matrix
     mat = skmech.Material(E={-1: 2e11, 1: 1e11}, nu={-1: 0.3, 1: 0.3},
                           case='stress')
     model = skmech.Model(msh, zerolevelset=zls, material=mat,
                          thickness=0.01)
 
+    E = {}
     dof = {}
     for eid, [etype, *_] in model.elements.items():
         ele = skmech.constructor(eid, etype, model)
         dof[eid] = ele.dof
+        E[eid] = ele.E
 
     assert dof[1] == [1, 2, 3, 4, 5, 6, 7, 8, 19, 20, 21, 22, 23, 24, 25,
                       26, 27, 28, 29, 30, 35, 36, 43, 44, 45, 46]
@@ -218,4 +221,44 @@ def test_dof3():
                       36, 37, 38, 39, 40, 41, 42, 43, 44, 47, 48]
     assert dof[4] == [7, 8, 5, 6, 15, 16, 17, 18, 23, 24, 25, 26, 29, 30, 35,
                       36, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+    assert E[1] == [2e11, 1e11, 1e11, 1e11]
+    assert E[2] == [1e11, 2e11, 1e11, 1e11]
+    assert E[3] == [1e11, 1e11, 2e11, 1e11]
+    assert E[4] == [1e11, 1e11, 1e11, 2e11]
 
+
+def test_material_nonenriched_element():
+    """test if material is properly asigned for non enriched elements when in 
+    xfem analysis with 3 elements
+
+    """
+    class Mesh():
+        def __init__(self):
+            self.nodes = {
+                1: [0, 0, 0],
+                2: [1, 0, 0],
+                3: [1, 1, 0],
+                4: [0, 1, 0],
+                5: [2, 0, 0],
+                6: [2, 1, 0],
+                7: [3, 0, 0],
+                8: [3, 1, 0]
+            }
+            self.elements = {
+                1: [3, 2, 11, 10, 1, 2, 3, 4],
+                2: [3, 2, 11, 10, 2, 5, 6, 3],
+                3: [3, 2, 11, 10, 5, 7, 8, 6]
+            }
+    msh = Mesh()
+    func = lambda x, y: x - 0.5
+    zls = skmech.xfem.ZeroLevelSet(func, [0, 3], [0, 1], num_div=50)
+    mat = skmech.Material(E={-1: 2.22, 1: 1.11}, nu={-1: 0.3, 1: 0.3})
+    model = skmech.Model(msh, zerolevelset=zls, material=mat, thickness=0.01)
+
+    E = {}
+    for eid, [etype, *_] in model.elements.items():
+        ele = skmech.constructor(eid, etype, model)
+        E[eid] = ele.E
+    assert E[3] == 1.11
+    assert E[1] == [2.22, 1.11, 1.11, 2.22]
+    assert E[2] == [1.11, 1.11, 1.11, 1.11]

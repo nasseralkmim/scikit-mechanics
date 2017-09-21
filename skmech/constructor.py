@@ -15,6 +15,7 @@ def constructor(eid, etype, model):
                 return Quad4Enr(eid, model)
             else:
                 # catch non enriched elements
+                # TODO: element material for non enriched element
                 # update element material for matrix or reinforcement
                 phy_surf = model.elements[eid][2]
                 if eid in model.xfem.element_material['reinforcement']:
