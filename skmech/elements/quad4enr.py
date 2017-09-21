@@ -34,13 +34,15 @@ class Quad4Enr(Quad4):
         self.eid = eid
         self.mesh = model.mesh
         self.num_quad_points = model.num_quad_points[eid]
-        self.num_dof = model.num_dof
+        self.num_dof = model.xfem.num_dof
 
-        self.zerolevelset = model.xfem.zls
         self.conn = self._get_connectivity(model.elements)
-        self.enr_nodes = self._get_enriched_nodes(self.conn)
         self.xyz = self._get_nodes_coordinates(model.mesh.nodes)
-        self.E, self.nu = self._get_material(model.material)
+
+        self.zerolevelset = self._get_zerolevelset(model.xfem.zls)
+        self.enr_nodes = self._get_enriched_nodes()
+
+        self.E, self.nu = self._get_material(model.xfem.material)
         self.gauss = quadrature.Quadrilateral(self.num_quad_points)
         self.dof = self._get_dof(model.nodes_dof)
         self.id_m, self.id_v = self._get_incidence()
@@ -97,7 +99,7 @@ class Quad4Enr(Quad4):
                 nu[j] = material.nu[-1]
         return E, nu
 
-    def _get_enriched_nodes(self, conn):
+    def _get_enriched_nodes(self):
         """Get element enriched nodes for each level set
 
         Returns
@@ -106,10 +108,31 @@ class Quad4Enr(Quad4):
             list with sorted enriched nodes for each level set
 
         """
-        enr_nodes = []
-        for _, zls in self.zerolevelset.items():
-            enr_nodes.append(np.intersect1d(zls.enr_nodes, conn))
+        enr_nodes = {}
+        for zid, zls in self.zerolevelset.items():
+            enr_nodes[zid] = np.intersect1d(zls.enr_nodes, self.conn)
         return enr_nodes
+
+    # TODO: onely the levelsets that affect this element in a list
+    def _get_zerolevelset(self, model_zerolevelset):
+        """Get the zero level set that affect this element
+
+        Returns
+        -------
+        dict
+            with the zero level set objects
+
+        Note:
+        ----
+        By checking if this zls has any element node as enriched
+
+        """
+        zerolevelset = {}
+        for zid, zls in model_zerolevelset.items():
+            enr_nodes = np.intersect1d(zls.enr_nodes, self.conn)
+            if len(enr_nodes) > 0:
+                zerolevelset[zid] = zls
+        return zerolevelset
 
     def stiffness_matrix(self, t=1):
         """Build the enriched element stiffness matrix
@@ -191,7 +214,7 @@ class Quad4Enr(Quad4):
 
         # arrange Benr based on zls order
         Benr = np.block([Benr_zls[i]
-                         for i in range(len(self.zerolevelset))])
+                         for i in self.zerolevelset.keys()])
         return Benr
 
     def load_body_vector(self, b_force=None, t=1):
