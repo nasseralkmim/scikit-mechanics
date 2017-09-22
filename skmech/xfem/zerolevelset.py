@@ -52,11 +52,11 @@ class ZeroLevelSet(object):
             for xc, yc, r in region:
                 mask = (self.grid_x - xc)**2 + (self.grid_y - yc)**2 <= r**2
                 ls += mask.astype(int)
-            ls = (-ls + 1/2)*2
+            ls = (-ls + 1 / 2) * 2
 
         # be careful with 0 division, converting it to 0.
         with np.errstate(divide='ignore', invalid='ignore'):
-            self.mask = np.nan_to_num(ls/abs(ls))
+            self.mask = np.nan_to_num(ls / abs(ls))
 
         if material is not None:
             self.material = material

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot2dzls(zls, ax, plot_cbar=True, **kwargs):
+def plotzls(zls, ax, plot_cbar=True, **kwargs):
     """plot 2d level set with zlsmask
 
     Parameters
@@ -17,7 +17,7 @@ def plot2dzls(zls, ax, plot_cbar=True, **kwargs):
         mask = np.zeros_like(zls[0].mask)
         for z in zls:
             mask += z.mask
-        mask = (mask/len(zls) - .5)/.5  # 0,1 -> -1, 1
+        mask = (mask / len(zls) - .5) / .5  # 0,1 -> -1, 1
         zlsmask = mask
         X, Y = zls[0].grid_x, zls[0].grid_y
     else:

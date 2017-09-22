@@ -7,46 +7,53 @@ from ..constructor import constructor
 def internode_enrichment(U, model, grid=5):
     """Post process enriched results in inter nodes domain
 
-    Args:
-        U (numpy array): shape (num_dof,) the displacement at the degree's of
-            freedom (dof) appended by the value of the constants referent to
-            enriched dofs.
-        model (obj): model object
+    Parameters
+    ----------
+    U : numpy array
+        shape (num_dof,) the displacement at the degree's of
+        freedom (dof) appended by the value of the constants referent to
+        enriched dofs.
+    model : obj
+        model object
 
-    Returns:
-        numpy array: shape (num_nodes, 4) coordinates (x, y) and displacement
-             x, y for nodes in mesh.
+    Returns
+    -------
+    numpy array
+        shape (num_nodes, 4) coordinates (x, y) and displacement
+        x, y for nodes in mesh.
 
-    Note:
-        Considering an enriched element, then
+    Note
+    ----
+    Considering an enriched element, then
 
-            u(X, t) = u_std + u_enr
+        u(X, t) = u_std + u_enr
 
-        where, u_std is the standard FEM solution and u_enr the enrichment
-        part. The enrichment part is given by,
+    where, u_std is the standard FEM solution and u_enr the enrichment
+    part. The enrichment part is given by,
 
-            u_enr(X, t) = \sum_{j=1}^{num_enr_nodes} N_j(Xi) PSI_j(Xi) a_j
+        u_enr(X, t) = \sum_{j=1}^{num_enr_nodes} N_j(Xi) PSI_j(Xi) a_j
 
-        where N_j(Xi) is the standard shape function PSI_j(Xi) is the shifted
-        enrichment function, which used the same shape functions therefore it
-        is also a function of the isoparametric coordinates. For instance,
-        a weak discontinuity enrichment function for node `j` in a element:
+    where N_j(Xi) is the standard shape function PSI_j(Xi) is the shifted
+    enrichment function, which used the same shape functions therefore it
+    is also a function of the isoparametric coordinates. For instance,
+    a weak discontinuity enrichment function for node `j` in a element:
 
-            PSI_j = abs(N(Xi) @ phi) - abs(phi[j])
+        PSI_j = abs(N(Xi) @ phi) - abs(phi[j])
 
-        where, phi = [phi_1, phi_2, phi_3, phi_4] is the signed distance
-        function using local index, phi_1 is the first node in element.conn.
-        N(Xi) in this case is a 1d array with shape functions for each element
-        node and `N @ phi` is an approximation for phi using the standard shape
-        functions
+    where, phi = [phi_1, phi_2, phi_3, phi_4] is the signed distance
+    function using local index, phi_1 is the first node in element.conn.
+    N(Xi) in this case is a 1d array with shape functions for each element
+    node and `N @ phi` is an approximation for phi using the standard shape
+    functions
 
-    Note:
-        The inter node approximation is done by subdividing the element
-        in the isoparametric domain in a grid n x n, then compute the
-        approximation at all the grid points.
-        The approximation is stored in an array together with the point
-        coordinates that is transformed from the isoparametric to Cartesian
-        system.
+    Note
+    ----
+    The inter node approximation is done by subdividing the element
+    in the isoparametric domain in a grid n x n, then compute the
+    approximation at all the grid points.
+    The approximation is stored in an array together with the point
+    coordinates that is transformed from the isoparametric to Cartesian
+    system.
 
     Note:
         model.enriched_elements = [enr_ele1, enr_ele2, ...]: global element tag
