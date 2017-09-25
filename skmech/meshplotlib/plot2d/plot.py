@@ -72,6 +72,28 @@ def field(xyz, field, ax, orientation='vertical',
     ax.set_aspect('equal')
 
 
+def update_nodes_coordinate(nodes, displ):
+    """Update coordinates of nodes with the respective displacement
+
+    Parameters
+    ----------
+    nodes : dict {nid, [x, y, z]}
+    displ : dict {nid, [dx, dy]}
+
+    Returns
+    -------
+    dict
+        dictionary with new nodes coordinates
+
+    """
+    nodes_updt = {}
+    for nid, xyz in nodes.items():
+        nodes_updt[nid] = [
+            xyz[0] + displ[nid][0] * magf, xyz[1] + displ[nid][1] * magf
+        ]
+    return nodes_updt
+
+
 def deformed(nodes, elements, displ, ax, magf=1):
     """plot deformed structure
 
@@ -82,11 +104,7 @@ def deformed(nodes, elements, displ, ax, magf=1):
     displ : dict {nid, [dx, dy]}
 
     """
-    nodes_updt = {}
-    for nid, xyz in nodes.items():
-        nodes_updt[nid] = [xyz[0] + displ[nid][0]*magf,
-                           xyz[1] + displ[nid][1]*magf]
-
+    nodes_updt = update_nodes_coordinate(nodes, displ)
     elements2d(nodes_updt, elements, ax, color='red')
     # recompute the ax.dataLim
     ax.relim()
