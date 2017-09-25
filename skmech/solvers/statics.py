@@ -36,6 +36,7 @@ def solver(model, t=1):
     np.set_printoptions(precision=2, suppress=True)
     Km, Pm = dirichlet(K, P, model)
     U = np.linalg.solve(Km, Pm)
+    model.set_dof_displacement(U)
     u = dof2node(U, model)
     end = time.time()
     print('Solution completed in {:.3f}s!'.format(end - start))

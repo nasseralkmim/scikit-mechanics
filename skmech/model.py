@@ -38,6 +38,8 @@ class Model(object):
         self.displacement = displacement
         self.thickness = thickness
 
+        self.dof_displacement = 0
+
         self.etypes = etypes
         self.elements = self._get_elements(mesh.elements)
         self.nodes = mesh.nodes
@@ -59,8 +61,12 @@ class Model(object):
             self.xfem = Xfem(self.nodes, self.elements,
                              zerolevelset, material)
 
+    def set_dof_displacement(self, displacement):
+        """Set the dof displacemnt into model attribute"""
+        self.dof_displacement = displacement
+
     def get_physical_element(self, physical_element):
-        """get physical line element
+        """Get physical line element
 
         Parameters
         ----------
