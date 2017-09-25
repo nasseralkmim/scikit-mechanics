@@ -7,10 +7,13 @@ import matplotlib.pyplot as plt
 def field2d(xyz, field, ax, orientation, cbar_label, **kwargs):
     """Plot 2d scalar field
 
-    Args:
-        xyz (numpy array shape (num_nodes, 2)): nodes coordinates
-        field (numpy array shape (num_nodes, )): scalar field value at nodes
-        ax (obj): matplotlib ax
+    Parameters
+    ----------
+    xyz : ndarray, shape(num_points, 2))
+        nodes coordinates (x, y)
+    field : ndarray, shape(num_points, ))
+        scalar field value at nodes
+    ax : matplotlib axes object
 
     """
     trian = tri.Triangulation(xyz[:, 0], xyz[:, 1])
