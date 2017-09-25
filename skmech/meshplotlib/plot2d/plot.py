@@ -63,22 +63,69 @@ def geometry2(model, ax,
     ax.set_aspect('equal')
 
 
-def field(xyz, field, ax, orientation='vertical',
-          cbar_label='Stress', **kwargs):
-    """plot field
+def field_(nodes, displ, field, ax, orientation='vertical',
+           cbar_label='Stress', element_color='white', fieldmagf=1,
+           magf=1, **kwargs):
+    """Plot field extrapolated to nodes
+
+    Parameters
+    ----------
+    nodes : dict
+        nodes id and nodes coordinates {nid, [x, y, z]}
+    displ : dict
+        nodes id and nodes displacement {nid, [ux, uy]}
+    field : ndarray, shape((num_quad_points, 3))
+        array with coordinates where field is and field value (x, y, f(x, y))
 
     """
-    field2d(xyz, field, ax, orientation, cbar_label, **kwargs)
+    # points to interpolate data, nodes coordinates deformed config
+    nodes_updt = update_nodes_coordinate(nodes, displ, magf)
+    xi = (np.asarray([nodes_updt[nid][0] for nid in nodes.keys()]),
+          np.asarray([nodes_updt[nid][1] for nid in nodes.keys()]))
+
+    points = field[:, [0, 1]]   # data points coordinate
+    values = field[:, 2]        # data values at points
+    interpolated_field = interpolate.griddata(points, values, xi,
+                                              method='nearest')
+
+    points_updt = np.vstack((points, np.vstack((xi[0], xi[1])).T))
+    values_updt = np.hstack((values, interpolated_field))
+
+    field2d(points_updt, values_updt * fieldmagf, ax, orientation, cbar_label,
+            **kwargs)
+    ax.relim()
+    ax.autoscale_view()
     ax.set_aspect('equal')
 
 
-def update_nodes_coordinate(nodes, displ):
+def field(field, ax, orientation='vertical',
+           cbar_label='Stress', element_color='white', fieldmagf=1,
+           magf=1, **kwargs):
+    """Plot field extrapolated to nodes
+
+    Parameters
+    ----------
+    field : ndarray, shape((num_quad_points, 3))
+        array with coordinates where field is and field value (x, y, f(x, y))
+
+    """
+    points = field[:, [0, 1]]   # data points coordinate
+    values = field[:, 2]        # data values at points
+
+    field2d(points, values * fieldmagf, ax, orientation, cbar_label,
+            **kwargs)
+    ax.relim()
+    ax.autoscale_view()
+    ax.set_aspect('equal')
+
+
+def update_nodes_coordinate(nodes, displ, magf):
     """Update coordinates of nodes with the respective displacement
 
     Parameters
     ----------
-    nodes : dict {nid, [x, y, z]}
-    displ : dict {nid, [dx, dy]}
+    nodes : dict, {nid, [x, y, z]}
+    displ : dict, {nid, [dx, dy]}
 
     Returns
     -------
