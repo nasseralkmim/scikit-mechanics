@@ -32,6 +32,24 @@ def results_at_fixed_y(u, nodes, y=0, decimals=3):
     return filtered_u
 
 
+def field_at_fixed_y(field, nodes, y=0, decimals=3):
+    """Filter field at specific y
+
+    Parameters
+    ----------
+    field : ndarray, shape((num_points, 3))
+        field coordinate points and fielf value (x, y, value)
+    nodes : dict
+        nodes coordinate {nid: [x, y]}
+
+    """
+    nodes_index = np.where(np.round(field[:, 1], decimals) == y)[0]
+    filtered_field = field[nodes_index]
+    # sort filtered_u based on x coordinate
+    filtered_field = filtered_field[np.argsort(filtered_field[:, 0])]
+    return filtered_field
+
+
 def dict2array(u, nodes):
     """Convert dictionary to array
 
