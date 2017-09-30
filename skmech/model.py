@@ -24,18 +24,14 @@ class Model(object):
     is passed (composition).
 
     """
-    def __init__(self, mesh,
-                 material=None,
-                 traction=None,
-                 displacement=None,
-                 body_forces=None,
-                 zerolevelset=None,
+    def __init__(self, mesh, material=None, traction=None,
+                 displacement_bc=None, body_forces=None, zerolevelset=None,
                  num_quad_points=4, thickness=1., etypes=[3]):
         self.mesh = mesh
         self.material = material
         self.traction = traction
         self.body_forces = body_forces
-        self.displacement = displacement
+        self.displacement_bc = displacement_bc
         self.thickness = thickness
 
         self.dof_displacement = 0
@@ -60,6 +56,7 @@ class Model(object):
         else:
             self.xfem = Xfem(self.nodes, self.elements,
                              zerolevelset, material)
+            self.num_dof = self.xfem.num_dof            # update num dof
 
     def set_dof_displacement(self, displacement):
         """Set the dof displacemnt into model attribute"""
@@ -153,7 +150,7 @@ class Model(object):
         return {key: value
                 for key, value in
                 zip(self.mesh.elements.keys(),
-                    [num_quad_points]*self.num_ele)}
+                    [num_quad_points] * self.num_ele)}
 
 
 if __name__ == '__main__':

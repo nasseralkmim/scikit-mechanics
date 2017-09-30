@@ -2,8 +2,8 @@
 import numpy as np
 
 
-def results_at_fixed_y(u, nodes, y=0, decimals=3):
-    """filter results for a fixed y coordinate
+def displacements_at_fixed_y(u, nodes, y=0, decimals=3):
+    """Filter results for a fixed y coordinate
 
     Parameters
     ----------
@@ -56,7 +56,7 @@ def dict2array(u, nodes):
     Parameters
     ----------
     u : dict
-        dictionary with node index and its displacement
+        dictionary with node index and its displacement {nid, [ux, uy]}
     nodes : dict
         dictionary with node index and its location coordinates
 

@@ -2,7 +2,7 @@
 
 """
 import numpy as np
-from .constructor import constructor
+from ..constructor import constructor
 
 
 def recovery(model, U, EPS0, t=1):
@@ -41,21 +41,21 @@ def recovery(model, U, EPS0, t=1):
                 C = element.c_matrix(t)
 
             B = np.array([
-               [dN_xi[0, 0], 0, dN_xi[0, 1], 0, dN_xi[0, 2], 0,
-                dN_xi[0, 3], 0],
-               [0, dN_xi[1, 0], 0, dN_xi[1, 1], 0, dN_xi[1, 2], 0,
-                dN_xi[1, 3]],
-               [dN_xi[1, 0], dN_xi[0, 0], dN_xi[1, 1], dN_xi[0, 1],
-                dN_xi[1, 2], dN_xi[0, 2], dN_xi[1, 3], dN_xi[0, 3]]])
+                [dN_xi[0, 0], 0, dN_xi[0, 1], 0, dN_xi[0, 2], 0,
+                 dN_xi[0, 3], 0],
+                [0, dN_xi[1, 0], 0, dN_xi[1, 1], 0, dN_xi[1, 2], 0,
+                 dN_xi[1, 3]],
+                [dN_xi[1, 0], dN_xi[0, 0], dN_xi[1, 1], dN_xi[0, 1],
+                 dN_xi[1, 2], dN_xi[0, 2], dN_xi[1, 3], dN_xi[0, 3]]])
 
             # sig = [sig_11 sig_22 sig_12] for each n node
             sig = C @ (B @ u - eps0)
 
             # dof 1 degree of freedom per node
-            d = int(dof[2*n]/2)
+            d = int(dof[2 * n] / 2)
 
             # unweighted average of stress at nodes
-            SIG[d, :] += sig/num_ele_shrg
+            SIG[d, :] += sig / num_ele_shrg
 
     return SIG
 
@@ -161,8 +161,8 @@ def recovery_at_gp(U, model, t=1):
         u = U[element.dof]
 
         # loop over quadrature points
-        for w, gp in zip(element.gauss_quad.weights,
-                         element.gauss_quad.points):
+        for w, gp in zip(element.gauss.weights,
+                         element.gauss.points):
 
             N, dN_ei = element.shape_function(xez=gp)
             dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
@@ -218,13 +218,11 @@ def recovery_at_gp(U, model, t=1):
     return np.array(sig)
 
 
-def stress_recovery(displ, model, t=1):
+def stress_recovery(model, t=1):
     """recovery stresses at gauss points (gp)
 
     Parameters
     ----------
-    displ : dict
-        results for each degree of freedom in the format {nid, [ux, uy]}
     model : Model object
         object with model attributes
     t : float, default 1
@@ -233,20 +231,20 @@ def stress_recovery(displ, model, t=1):
     Returns
     -------
     ndarray, shape(num_ele*num_gp, 5))
-        with the coordinates of each gauss points coordinates in the cartesian 
+        with the coordinates of each gauss points coordinates in the cartesian
         system, and the stress values at those points. Example:
             [[gp1_x, gp2_y, s11, s22, s13], ...]
 
     """
     sig = []
-    for e, conn in enumerate(model.CONN):
-        element = constructor(e, model)
-
-        u = displ[element.dof]
+    for eid, [etype, *edata] in model.elements.items():
+        element = constructor(eid, etype, model)
+        dof = np.asarray(element.dof) - 1  # go to 0 based
+        u = model.dof_displacement[dof]
 
         # loop over quadrature points
-        for w, gp in zip(element.gauss_quad.weights,
-                         element.gauss_quad.points):
+        for w, gp in zip(element.gauss.weights,
+                         element.gauss.points):
 
             N, dN_ei = element.shape_function(xez=gp)
             dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
@@ -254,42 +252,10 @@ def stress_recovery(displ, model, t=1):
             C = element.c_matrix(N, t)
 
             # Standard geadient operator matrix (stain-displacement)
-            B_s = []
-            for j in range(element.num_std_nodes):
-                B_s.append(np.array([[dN_xi[0, j], 0],
-                                     [0, dN_xi[1, j]],
-                                     [dN_xi[1, j], dN_xi[0, j]]]))
-            Bstd = np.block([B_s[i] for i in range(element.num_std_nodes)])
+            Bstd = element.gradient_operator(dN_xi)
 
             if model.xfem:
-
-                # loop for each zero level set
-                Benr_zls = {}   # Benr for each zerp level est
-                for ind, zls in enumerate(element.zerolevelset):
-                    # signed distance for nodes in this element for this zls
-                    phi = zls.phi[element.conn]  # phi with local index
-                    # Enriched gradient operator matrix
-                    B_e = {}
-                    for n in element.enriched_nodes[ind]:
-                        # local reference of node n in element
-                        j = element.global2local_index(n)
-                        psi = abs(N @ phi) - abs(phi[j])
-
-                        dpsi_x = np.sign(N @ phi) * (dN_xi[0, :] @ phi)
-                        dpsi_y = np.sign(N @ phi) * (dN_xi[1, :] @ phi)
-                        B_e[n] = np.array([
-                            [dN_xi[0, j] * (psi) + N[j] * dpsi_x, 0],
-                            [0, dN_xi[1, j] * (psi) + N[j] * dpsi_y],
-                            [dN_xi[1, j] * (psi) + N[j] * dpsi_y,
-                             dN_xi[0, j] * (psi) + N[j] * dpsi_x]])
-
-                    Benr_zls[ind] = np.block([B_e[i]
-                                              for i
-                                              in element.enriched_nodes[ind]])
-
-                Benr = np.block([Benr_zls[i]
-                                 for i in range(len(element.zerolevelset))])
-
+                Benr = element.enriched_gradient_operator(N, dN_xi)
                 B = np.block([Bstd, Benr])
             else:
                 B = Bstd

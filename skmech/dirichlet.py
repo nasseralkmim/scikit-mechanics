@@ -2,27 +2,25 @@
 import numpy as np
 
 
-def  dirichlet(K, F, model):
+def dirichlet(K, F, model):
     """Apply Dirichlet BC.
 
     Parameters
     ----------
-    K : numpy array shape(num_dof, num_dof)
-    F : numpy array shape(num_dof,)
-    displacement : dict or None
-        displacement boundary condition in a dictionary with key the physical
-        element where the boundary is.
+    K : ndarray shape((num_dof, num_dof))
+    F : ndarray shape((num_dof,))
+    model : Model object
 
     Returns
     -------
     K : numpy array
         Modified array to ensure boundary condition
     F : numpy array
-        Modifiec array
+        Modified array
 
     """
-    if model.displacement is not None:
-        for d_location, d_vector in model.displacement.items():
+    if model.displacement_bc is not None:
+        for d_location, d_vector in model.displacement_bc.items():
             physical_element = model.get_physical_element(d_location)
             if len(physical_element) == 0:
                 raise Exception('Check if the physical element {} '

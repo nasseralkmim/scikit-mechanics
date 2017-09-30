@@ -1,6 +1,7 @@
 """plot mesh from nodal coordinates and connectivity"""
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import interpolate
 from .nodes2d import nodes2d
 from .elements2d import elements2d
 from .nodes2dlabel import nodes2dlabel
@@ -10,7 +11,8 @@ from .surfaces2dlabel import surfaces2dlabel
 from .field2d import field2d
 
 
-def geometry2(model, ax,
+def geometry2(model,
+              ax,
               elements=True,
               nodes=False,
               nodes_label=False,
@@ -63,9 +65,16 @@ def geometry2(model, ax,
     ax.set_aspect('equal')
 
 
-def field_(nodes, displ, field, ax, orientation='vertical',
-           cbar_label='Stress', element_color='white', fieldmagf=1,
-           magf=1, **kwargs):
+def field_(nodes,
+           displ,
+           field,
+           ax,
+           orientation='vertical',
+           cbar_label='Stress',
+           element_color='white',
+           fieldmagf=1,
+           magf=1,
+           **kwargs):
     """Plot field extrapolated to nodes
 
     Parameters
@@ -83,10 +92,10 @@ def field_(nodes, displ, field, ax, orientation='vertical',
     xi = (np.asarray([nodes_updt[nid][0] for nid in nodes.keys()]),
           np.asarray([nodes_updt[nid][1] for nid in nodes.keys()]))
 
-    points = field[:, [0, 1]]   # data points coordinate
-    values = field[:, 2]        # data values at points
-    interpolated_field = interpolate.griddata(points, values, xi,
-                                              method='nearest')
+    points = field[:, [0, 1]]  # data points coordinate
+    values = field[:, 2]  # data values at points
+    interpolated_field = interpolate.griddata(
+        points, values, xi, method='nearest')
 
     points_updt = np.vstack((points, np.vstack((xi[0], xi[1])).T))
     values_updt = np.hstack((values, interpolated_field))
@@ -98,9 +107,14 @@ def field_(nodes, displ, field, ax, orientation='vertical',
     ax.set_aspect('equal')
 
 
-def field(field, ax, orientation='vertical',
-           cbar_label='Stress', element_color='white', fieldmagf=1,
-           magf=1, **kwargs):
+def field(field,
+          ax,
+          orientation='vertical',
+          cbar_label='Stress',
+          element_color='white',
+          fieldmagf=1,
+          magf=1,
+          **kwargs):
     """Plot field extrapolated to nodes
 
     Parameters
@@ -109,11 +123,10 @@ def field(field, ax, orientation='vertical',
         array with coordinates where field is and field value (x, y, f(x, y))
 
     """
-    points = field[:, [0, 1]]   # data points coordinate
-    values = field[:, 2]        # data values at points
+    points = field[:, [0, 1]]  # data points coordinate
+    values = field[:, 2]  # data values at points
 
-    field2d(points, values * fieldmagf, ax, orientation, cbar_label,
-            **kwargs)
+    field2d(points, values * fieldmagf, ax, orientation, cbar_label, **kwargs)
     ax.relim()
     ax.autoscale_view()
     ax.set_aspect('equal')
@@ -141,7 +154,7 @@ def update_nodes_coordinate(nodes, displ, magf):
     return nodes_updt
 
 
-def deformed(nodes, elements, displ, ax, magf=1):
+def deformed(nodes, elements, displ, ax, magf=1, element_color='red'):
     """plot deformed structure
 
     Parameters
@@ -151,8 +164,8 @@ def deformed(nodes, elements, displ, ax, magf=1):
     displ : dict {nid, [dx, dy]}
 
     """
-    nodes_updt = update_nodes_coordinate(nodes, displ)
-    elements2d(nodes_updt, elements, ax, color='red')
+    nodes_updt = update_nodes_coordinate(nodes, displ, magf)
+    elements2d(nodes_updt, elements, ax, color=element_color)
     # recompute the ax.dataLim
     ax.relim()
     # update ax.viewLim using the new dataLim
@@ -172,21 +185,17 @@ def geometry(nodes, elements, ax):
 
 
 if __name__ == '__main__':
+
     class Model:
         pass
+
     model = Model
-    model.XYZ = np.array([[0, 0], [1, 0], [1, 1], [0, 1],
-                          [2, 0], [2, 1]])
-    model.CONN = np.array([[0, 1, 2, 3],
-                           [1, 4, 5, 2]])
+    model.XYZ = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [2, 0], [2, 1]])
+    model.CONN = np.array([[0, 1, 2, 3], [1, 4, 5, 2]])
     fig, ax = plt.subplots()
     geometry(model, ax, elements=True, nodes_label=True)
 
-    displ = np.array([[1, 0, .2, 0],
-                      [1, 1, .3, 0],
-                      [0, 1, .1, 0],
-                      [0, 0, .1, 0],
-                      [2, 0, .4, 0],
-                      [2, .9999994, .5, 0]])
+    displ = np.array([[1, 0, .2, 0], [1, 1, .3, 0], [0, 1, .1, 0],
+                      [0, 0, .1, 0], [2, 0, .4, 0], [2, .9999994, .5, 0]])
     deformed(model, displ, ax)
     plt.show()

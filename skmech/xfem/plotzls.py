@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plotzls(zls, ax, plot_cbar=True, **kwargs):
+def plot_zls(zls, ax, plot_cbar=True, **kwargs):
     """plot 2d level set with zlsmask
 
     Parameters

@@ -46,7 +46,7 @@ class Xfem(object):
             zerolevelset = [zerolevelset]
 
         for zid, zls_obj in enumerate(zerolevelset):
-            # add the zerolevel objecto to a dictionary
+            # add the zerolevel object to a dictionary
             self.zls[zid] = zls_obj
             self.zls[zid].phi = distance(zls_obj.mask, zls_obj.grid_x,
                                          zls_obj.grid_y, xyz)
@@ -70,9 +70,9 @@ class Xfem(object):
         """get enriched dofs for each zero level set"""
         enr_node_dof = {}
         for ind, enr_node_id in enumerate(enr_nodes):
-            enr_node_dof[enr_node_id] = [ind*2 + self.num_dof + 1,
-                                         ind*2 + self.num_dof + 1 + 1]
-        self.num_dof += len(enr_nodes)*2
+            enr_node_dof[enr_node_id] = [ind * 2 + self.num_dof + 1,
+                                         ind * 2 + self.num_dof + 1 + 1]
+        self.num_dof += len(enr_nodes) * 2
         return enr_node_dof
 
     def _get_enriched_nodes(self, phi):
@@ -90,6 +90,7 @@ class Xfem(object):
         """Get elements that  have the discontinuity within them"""
         discontinuity_elements = []
         for eid, [_, _, _, _, *conn] in self.elements.items():
+
             conn = np.array(conn) - 1  # python starts at 0
             if np.all(phi[conn] < 0):
                 # add element to reinforcement list

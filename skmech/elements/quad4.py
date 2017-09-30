@@ -156,12 +156,12 @@ class Quad4(Element):
         xi, eta = xez[0], xez[1]
 
         # Terms of the shape function
-        e1_term = 0.5*(1.0 + self.xez[:, 0] * xi)
-        e2_term = 0.5*(1.0 + self.xez[:, 1] * eta)
+        e1_term = 0.5 * (1.0 + self.xez[:, 0] * xi)
+        e2_term = 0.5 * (1.0 + self.xez[:, 1] * eta)
 
         # Basis functions
         # N = [ N_1 N_2 N_3 N_4 ]
-        N = e1_term*e2_term
+        N = e1_term * e2_term
         self.N = np.array(N)
 
         # Derivative of the shape functions
@@ -262,8 +262,8 @@ class Quad4(Element):
         # if (jac[0, 0]*jac[1, 1] - jac[0, 1]*jac[1, 0]) < 0:
         #     print('Negative Jacobiano in element {}'.format(self.eid))
 
-        det_jac = abs((jac[0, 0]*jac[1, 1] -
-                       jac[0, 1]*jac[1, 0]))
+        det_jac = abs((jac[0, 0] * jac[1, 1] -
+                       jac[0, 1] * jac[1, 0]))
 
         # jac_inv = [ e1_x1 e2_x1
         #            e1_x2 e2_x2 ]
@@ -272,19 +272,19 @@ class Quad4(Element):
         # Using Chain rule,
         # N_xi = N_eI * eI_xi (2x4 array)
         dN_xi = np.zeros((2, 4))
-        dN_xi[0, :] = (dN_ei[0, :]*jac_inv[0, 0] +
-                       dN_ei[1, :]*jac_inv[0, 1])
+        dN_xi[0, :] = (dN_ei[0, :] * jac_inv[0, 0] +
+                       dN_ei[1, :] * jac_inv[0, 1])
 
-        dN_xi[1, :] = (dN_ei[0, :]*jac_inv[1, 0] +
-                       dN_ei[1, :]*jac_inv[1, 1])
+        dN_xi[1, :] = (dN_ei[0, :] * jac_inv[1, 0] +
+                       dN_ei[1, :] * jac_inv[1, 1])
 
         # Length of the transofmation arch
         # Jacobian for line integral-2.
         arch_length = np.array([
-            (jac[0, 0]**2 + jac[0, 1]**2)**(1/2),
-            (jac[1, 0]**2 + jac[1, 1]**2)**(1/2),
-            (jac[0, 0]**2 + jac[0, 1]**2)**(1/2),
-            (jac[1, 0]**2 + jac[1, 1]**2)**(1/2)
+            (jac[0, 0]**2 + jac[0, 1]**2)**(1 / 2),
+            (jac[1, 0]**2 + jac[1, 1]**2)**(1 / 2),
+            (jac[0, 0]**2 + jac[0, 1]**2)**(1 / 2),
+            (jac[1, 0]**2 + jac[1, 1]**2)**(1 / 2)
         ])
         return det_jac, dN_xi, arch_length
 

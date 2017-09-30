@@ -2,8 +2,10 @@
 
 Tests:
 
-1. Element material properties
+1. Element material properties matrix and reinforcement
+  1.1 Test element material for non enriched elements in xfem analysis
 2. Stiffness matrix
+3. Dof for when there is more than one zero level set
 
 """
 import numpy as np
@@ -48,7 +50,7 @@ def test_element_stiffness():
     for eid, [etype, *_] in model.elements.items():
         ele = skmech.constructor(eid, etype, model)
         emat[eid] = ele.E
-        k[eid] = ele.stiffness_matrix()
+        k[eid] = ele.stiffness_matrix()[ele.id_m]  # extract non augmentbed
 
     assert emat[3] == [109890109890.1099,
                        109890109890.1099,
@@ -73,11 +75,9 @@ def test_element_stiffness():
          [49.573, -0., 129.915, 0.], [0., -18.803, 0., 70.085]])
     assert np.allclose(k[1][8:, 8:] / 1e9 * 3600, k_enr_ele1, atol=1e-2)
 
-test_element_stiffness()
-
 
 def test_dof():
-    """test dof for 2 zero level set thtat don't share an element"""
+    """test dof for 2 zero level set thtat don't share an element with 4 ele"""
     class Mesh():
         def __init__(self):
             self.nodes = {
@@ -120,7 +120,7 @@ def test_dof():
 
 
 def test_dof2():
-    """test dof for two zero level sets"""
+    """test dof for two zero level sets in 2 elements"""
     class Mesh():
         def __init__(self):
             self.nodes = {
@@ -158,7 +158,6 @@ def test_dof2():
     for eid, [etype, *_] in model.elements.items():
         ele = skmech.constructor(eid, etype, model)
         dof[eid] = ele.dof
-        print(ele.dof)
 
     # element dof numbering following CCW for standards and following
     # the sorted enr node order for each zero level set
@@ -171,7 +170,10 @@ def test_dof2():
 
 
 def test_dof3():
-    """test dof for 4 zero level sets in separate 4 elements"""
+    """test dof for 4 zero level sets in separate 4 elements
+    also tests for matrix material properties.
+
+    """
     class Mesh():
         def __init__(self):
             self.nodes = {

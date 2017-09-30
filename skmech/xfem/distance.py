@@ -30,7 +30,7 @@ def distance(zero_ls, grid_x, grid_y, xyz):
     # number of division in each dimension
     dx, dy = np.size(zero_ls[:, 0]), np.size(zero_ls[0, :])
     # dx is the cell length in each direction
-    dist = skfmm.distance(zero_ls, dx=[1/(dx-1), 1/(dy-1)])
+    dist = skfmm.distance(zero_ls, dx=[1 / (dx - 1), 1 / (dy - 1)])
     # values shape (n,) at points shape (n, D) D is dimensions
     values = np.ndarray.flatten(dist)
     # points showld have shape (n, D) n is the number of samples

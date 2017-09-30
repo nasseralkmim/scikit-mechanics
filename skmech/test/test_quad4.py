@@ -33,12 +33,12 @@ msh.elements = {
 }
 material = skmech.Material(E={11: 10000}, nu={11: 0.3})
 traction = {5: (-1, 0), 7: (1, 0)}
-displacement = {12: (0, 0), 13: (None, 0)}
+displacement_bc = {12: (0, 0), 13: (None, 0)}
 model = skmech.Model(
     msh,
     material=material,
     traction=traction,
-    displacement=displacement,
+    displacement_bc=displacement_bc,
     num_quad_points=2)
 
 

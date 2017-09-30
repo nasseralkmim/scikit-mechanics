@@ -16,12 +16,12 @@ def solver(model, t=1):
 
     Return
     -------
-    U : numpy array shape(num_dof,)
-        displacement solution of the boundary value problem
+    u : dict
+        dictionary with node id and displacement
 
     """
     start = time.time()
-    print('Starting statics solver at {:.3f}h '.format(t/3600), end='')
+    print('Starting statics solver at {:.3f}h '.format(t / 3600), end='')
     K, P = 0, 0
     for eid, [etype, *edata] in model.elements.items():
         element = constructor(eid, etype, model)
@@ -33,7 +33,6 @@ def solver(model, t=1):
 
     Pt = neumann(model)
     P = P + Pt
-    np.set_printoptions(precision=2, suppress=True)
     Km, Pm = dirichlet(K, P, model)
     U = np.linalg.solve(Km, Pm)
     model.set_dof_displacement(U)

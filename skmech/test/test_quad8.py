@@ -1,7 +1,7 @@
 """test quad 8 node element"""
 import numpy as np
 import sympy as sp
-from elastopy.elements.quad8 import Quad8
+from skmech.elements.quad8 import Quad8
 
 
 def shapefunc(xiv, etav):

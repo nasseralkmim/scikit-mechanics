@@ -146,6 +146,9 @@ class Quad4Enr(Quad4):
         kaa = np.zeros((self.num_enr_dof, self.num_enr_dof))
         kua = np.zeros((self.num_std_dof, self.num_enr_dof))
 
+        # augmented matrix
+        K = np.zeros((self.num_dof, self.num_dof))
+
         for w, gp in zip(self.gauss.weights, self.gauss.points):
             N, dN_ei = self.shape_function(xez=gp)
             dJ, dN_xi, _ = self.jacobian(self.xyz, dN_ei)
@@ -154,13 +157,14 @@ class Quad4Enr(Quad4):
             Bstd = self.gradient_operator(dN_xi)
             Benr = self.enriched_gradient_operator(N, dN_xi)
 
-            kuu += w*(Bstd.T @ C @ Bstd)*dJ
-            kaa += w*(Benr.T @ C @ Benr)*dJ
-            kua += w*(Bstd.T @ C @ Benr)*dJ
+            kuu += w * (Bstd.T @ C @ Bstd) * dJ
+            kaa += w * (Benr.T @ C @ Benr) * dJ
+            kua += w * (Bstd.T @ C @ Benr) * dJ
 
         k = np.block([[kuu, kua],
                       [kua.T, kaa]])
-        return k * self.thickness
+        K[self.id_m] = k * self.thickness
+        return K
 
     def enriched_gradient_operator(self, N, dN_xi):
         """Build the enriched gradient operator
@@ -173,8 +177,8 @@ class Quad4Enr(Quad4):
 
         Returns
         -------
-        ndarray
-            the discretized enriched gradient operator shape(3,(num_enr_dof))
+        ndarray, shape(3,(num_enr_dof))
+            the discretized enriched gradient operator
 
         Note
         ----

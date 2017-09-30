@@ -90,9 +90,9 @@ if __name__ == '__main__':
     class Model: pass
     class Mesh: pass
     msh = Mesh()
-    msh.nodes = {1: [0, 0], 2:[0, 1]}
+    msh.nodes = {1: [0, 0], 2: [0, 1]}
     model = Model()
     model.mesh = msh
-    model.nodes_dof = {1: [1, 2], 2:[3, 4]}
+    model.nodes_dof = {1: [1, 2], 2: [3, 4]}
     field = np.array([10, 20, 30, 40])
     u = dof2node(field, model)
