@@ -17,6 +17,6 @@ def field2d(xyz, field, ax, orientation, cbar_label, **kwargs):
 
     """
     trian = tri.Triangulation(xyz[:, 0], xyz[:, 1])
-    cax = ax.tricontourf(trian, field, **kwargs)
+    cax = ax.tricontourf(trian, field, rasterized=True, **kwargs)
     cbar = plt.colorbar(cax, orientation=orientation)
     cbar.set_label(cbar_label)

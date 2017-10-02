@@ -127,8 +127,6 @@ def field(field,
     values = field[:, 2]  # data values at points
 
     field2d(points, values * fieldmagf, ax, orientation, cbar_label, **kwargs)
-    ax.relim()
-    ax.autoscale_view()
     ax.set_aspect('equal')
 
 
