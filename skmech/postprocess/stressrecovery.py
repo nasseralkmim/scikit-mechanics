@@ -255,8 +255,11 @@ def stress_recovery(model, t=1):
             Bstd = element.gradient_operator(dN_xi)
 
             if model.xfem:
-                Benr = element.enriched_gradient_operator(N, dN_xi)
-                B = np.block([Bstd, Benr])
+                if eid in model.xfem.enr_elements:
+                    Benr = element.enriched_gradient_operator(N, dN_xi)
+                    B = np.block([Bstd, Benr])
+                else:
+                    B = Bstd
             else:
                 B = Bstd
 
