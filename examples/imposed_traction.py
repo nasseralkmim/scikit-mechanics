@@ -1,5 +1,5 @@
-import skmech
 import matplotlib.pyplot as plt
+import skmech
 
 
 class Mesh():
@@ -32,12 +32,14 @@ msh.elements = {
     11: [3, 2, 11, 10, 9, 6, 3, 7],
     12: [3, 2, 11, 10, 8, 9, 7, 4]
 }
-displ = {12: (0, 0), 3: (None, 0)}
+displ = {12: (0, 0), 13: (None, 0)}
 traction = {7: (1, 0), 5: (-1, 0)}
 mat = skmech.Material(E={11: 1000}, nu={11: 0.3})
-model = skmech.Model(msh, material=mat, displacement=displ, traction=traction)
-u = skmech.statics.solver(model)
+model = skmech.Model(msh, material=mat, displacement_bc=displ,
+                     traction=traction)
+displ = skmech.statics.solver(model)
+sig = skmech.postprocess.stress_recovery(model)
 fig, ax = plt.subplots()
 skmech.plot.geometry(model.nodes, model.elements, ax)
-skmech.plot.deformed(model.nodes, model.elements, u, ax, magf=100)
+skmech.plot.deformed(model.nodes, model.elements, displ, ax, magf=100)
 plt.show()
