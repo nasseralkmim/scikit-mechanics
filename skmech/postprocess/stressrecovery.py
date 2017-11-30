@@ -269,3 +269,54 @@ def stress_recovery(model, t=1):
             sig.append([x, y, s[0], s[1], s[2]])
 
     return np.array(sig)
+def matrix_gp2node(gauss_point_coordinate):
+    """Construct the matrix for extrapolating from gp to nodes
+
+    gpc := gauss_point_coordinate, defines the square gauss element.
+    pte := point to extrapoate, considering a coordinate system centered in the
+        gauss element, the nodal coordinate is this system is going to be gpc.
+
+    Parameters
+    ----------
+    gauss_point_coordinate : float
+        the length of the square where the gauss point values are and from
+        where the values will be extrapolated to nodes
+
+    """
+    # short notation
+    gpc = gauss_point_coordinate
+
+    point_to_extrapolate = np.array([[-1 / gpc, -1 / gpc],
+                                     [1 / gpc, -1 / gpc],
+                                     [1 / gpc, 1 / gpc],
+                                     [-1 / gpc, 1 / gpc]])
+    # short notation
+    pte = point_to_extrapolate
+
+    Q = np.array([[1 / 4 * (1 - pte[0, 0]) * (1 - pte[0, 1]),
+                   1 / 4 * (1 + pte[0, 0]) * (1 - pte[0, 1]),
+                   1 / 4 * (1 + pte[0, 0]) * (1 + pte[0, 1]),
+                   1 / 4 * (1 - pte[0, 0]) * (1 + pte[0, 1])],
+                  [1 / 4 * (1 - pte[1, 0]) * (1 - pte[1, 1]),
+                   1 / 4 * (1 + pte[1, 0]) * (1 - pte[1, 1]),
+                   1 / 4 * (1 + pte[1, 0]) * (1 + pte[1, 1]),
+                   1 / 4 * (1 - pte[1, 0]) * (1 + pte[1, 1])],
+                  [1 / 4 * (1 - pte[2, 0]) * (1 - pte[2, 1]),
+                   1 / 4 * (1 + pte[2, 0]) * (1 - pte[2, 1]),
+                   1 / 4 * (1 + pte[2, 0]) * (1 + pte[2, 1]),
+                   1 / 4 * (1 - pte[2, 0]) * (1 + pte[2, 1])],
+                  [1 / 4 * (1 - pte[3, 0]) * (1 - pte[3, 1]),
+                   1 / 4 * (1 + pte[3, 0]) * (1 - pte[3, 1]),
+                   1 / 4 * (1 + pte[3, 0]) * (1 + pte[3, 1]),
+                   1 / 4 * (1 - pte[3, 0]) * (1 + pte[3, 1])]])
+    return Q
+
+
+
+def number_elements_sharing_node():
+    """Get the number of elements sharing a node"""
+    return None
+
+
+if __name__ == '__main__':
+    Q = matrix_gp2node(1 / np.sqrt(3))
