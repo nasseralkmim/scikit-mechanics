@@ -269,30 +269,145 @@ def stress_recovery(model, t=1):
             sig.append([x, y, s[0], s[1], s[2]])
 
     return np.array(sig)
-def matrix_gp2node(gauss_point_coordinate):
-    """Construct the matrix for extrapolating from gp to nodes
 
-    gpc := gauss_point_coordinate, defines the square gauss element.
-    pte := point to extrapoate, considering a coordinate system centered in the
-        gauss element, the nodal coordinate is this system is going to be gpc.
+
+def stress_recovery_smoothed(model, t=1):
+    """Recovery stress at gauss point then extracpolate to nodes
+
+    The stress is computed at the gauss points then extrapolated to element
+    nodes using the same shape functions. The extrapolation is also multiplied
+    by a weight that takes into account the number of elements sharing a node.
 
     Parameters
     ----------
-    gauss_point_coordinate : float
+    model : Model object
+        object with model attributes
+    t : float, default 1
+        time
+
+    Returns
+    -------
+    dict
+        {node id: [sx, sy, txy]} smoothed stresses
+
+    """
+    sig = {}
+    for eid, [etype, *edata] in model.elements.items():
+        element = constructor(eid, etype, model)
+        dof = np.asarray(element.dof) - 1  # go to 0 based
+        u = model.dof_displacement[dof]
+
+        # to store 4 values at gauss points
+        sig_x_gp, sig_y_gp, sig_xy_gp = [], [], []
+
+        # to form a square from which the interpolation to nodes will occur
+        ges = np.max(element.gauss.points)  # gauss element size
+        point_to_extrapolate = np.array([[-1 / ges, -1 / ges],
+                                         [1 / ges, -1 / ges],
+                                         [1 / ges, 1 / ges],
+                                         [-1 / ges, 1 / ges]])
+        Q = matrix_gp2node(pte=point_to_extrapolate)
+
+        # obtain stresses at GP
+        # loop over quadrature points
+        for gp in point_to_extrapolate:
+
+            N, dN_ei = element.shape_function(xez=gp)
+            dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
+
+            C = element.c_matrix(N, t)
+
+            # Standard geadient operator matrix (stain-displacement)
+            Bstd = element.gradient_operator(dN_xi)
+
+            if model.xfem:
+                if eid in model.xfem.enr_elements:
+                    Benr = element.enriched_gradient_operator(N, dN_xi)
+                    B = np.block([Bstd, Benr])
+                else:
+                    B = Bstd
+            else:
+                B = Bstd
+
+            # TODO: add initial strain due thermal changes
+            # stress at quadrature point s is shape(, 3)
+            sx, sy, sxy = C @ (B @ u)
+
+            # append the GP stress values into a list len(4)
+            sig_x_gp.append(sx)
+            sig_y_gp.append(sy)
+            sig_xy_gp.append(sxy)
+
+        # extrapolate from GP to nodes
+        sig_x_node = Q @ sig_x_gp
+        sig_y_node = Q @ sig_y_gp
+        sig_xy_node = Q @ sig_xy_gp
+
+        # create an empty list for the nodal stresses to collect from different
+        # elements
+        if sig.get(element.conn[0]) is None:
+            sig[element.conn[0]] = []
+        if sig.get(element.conn[1]) is None:
+            sig[element.conn[1]] = []
+        if sig.get(element.conn[2]) is None:
+            sig[element.conn[2]] = []
+        if sig.get(element.conn[3]) is None:
+            sig[element.conn[3]] = []
+
+        # append to each node key a vector with the stresses extrapolated
+        sig[element.conn[0]].append(np.array([sig_x_node[0],
+                                              sig_y_node[0],
+                                              sig_xy_node[0]]))
+        sig[element.conn[1]].append(np.array([sig_x_node[1],
+                                              sig_y_node[1],
+                                              sig_xy_node[1]]))
+        sig[element.conn[2]].append(np.array([sig_x_node[2],
+                                              sig_y_node[2],
+                                              sig_xy_node[2]]))
+        sig[element.conn[3]].append(np.array([sig_x_node[3],
+                                              sig_y_node[3],
+                                              sig_xy_node[3]]))
+
+    # smooth the stresses
+    # loop over nodes
+    for node, stresses in sig.items():
+        # each stresses = [ array(sx, sy, sxy), array(sx, sy, sxy)]
+        # each array is an extrapolation from an element that share the node
+        # len(stresses) means number of elements sharing this nodeq
+        if len(stresses) > 1:
+            # sum contribution of each element
+            sx = sum([s[0] for s in stresses]) / len(stresses)
+            sy = sum([s[1] for s in stresses]) / len(stresses)
+            sxy = sum([s[2] for s in stresses]) / len(stresses)
+
+            # change the list for an array
+            sig[node] = np.array([sx, sy, sxy])
+        else:
+            # change the list for the unique value in it
+            sig[node] = stresses[0]
+
+    return sig
+
+
+def matrix_gp2node(pte):
+    """Construct the matrix for extrapolating from gp to nodes
+
+    ges := gauss_element_size, defines the square gauss element.
+    pte := point to extrapoate, considering a coordinate system centered in the
+        gauss element, the nodal coordinate is this system is going to be ges.
+
+    Parameters
+    ----------
+    gauss_element_size : float
         the length of the square where the gauss point values are and from
         where the values will be extrapolated to nodes
 
+    Returns
+    -------
+    ndarray shape(4, 4)
+        matrix that will extrapolate gauss point values into nodes
+
     """
-    # short notation
-    gpc = gauss_point_coordinate
-
-    point_to_extrapolate = np.array([[-1 / gpc, -1 / gpc],
-                                     [1 / gpc, -1 / gpc],
-                                     [1 / gpc, 1 / gpc],
-                                     [-1 / gpc, 1 / gpc]])
-    # short notation
-    pte = point_to_extrapolate
-
     Q = np.array([[1 / 4 * (1 - pte[0, 0]) * (1 - pte[0, 1]),
                    1 / 4 * (1 + pte[0, 0]) * (1 - pte[0, 1]),
                    1 / 4 * (1 + pte[0, 0]) * (1 + pte[0, 1]),
@@ -312,11 +427,10 @@ def matrix_gp2node(gauss_point_coordinate):
     return Q
 
 
-
-def number_elements_sharing_node():
-    """Get the number of elements sharing a node"""
-    return None
-
-
 if __name__ == '__main__':
     Q = matrix_gp2node(1 / np.sqrt(3))
+    print(Q, 1 + np.sqrt(3) / 2, 1 - np.sqrt(3) / 2)
+    # [[ 1.8660254 -0.5        0.1339746 -0.5      ]
+    #  [-0.5        1.8660254 -0.5        0.1339746]
+    #  [ 0.1339746 -0.5        1.8660254 -0.5      ]
+    #  [-0.5        0.1339746 -0.5        1.8660254]] 1.86602540378 0.133974216
