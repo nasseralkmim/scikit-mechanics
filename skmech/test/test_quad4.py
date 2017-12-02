@@ -119,3 +119,17 @@ def test_dirichlet():
     assert Km[1, 1] == 1
     assert Fm[0] == 0
     assert Fm[1] == 0
+
+
+def test_stress_recovery():
+    """Test the stress recovery procedure"""
+    u = skmech.statics.solver(model)
+
+    # check displacement at center node
+    assert pytest.approx(list(u[9]), 2) == [4e-5, -1.8e-5]
+
+    sig = skmech.postprocess.stress_recovery(model)
+    assert pytest.approx(sig[0, 2], 2) == 1.0
+
+    sig2 = skmech.postprocess.stress_recovery_smoothed(model)
+    assert pytest.approx(sig2[9][0], 2) == 1.0
