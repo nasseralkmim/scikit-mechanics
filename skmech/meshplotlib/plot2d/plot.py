@@ -113,9 +113,10 @@ def field(field,
           cbar_label='Stress',
           element_color='white',
           fieldmagf=1,
+          geometrymagf=1,
           magf=1,
           **kwargs):
-    """Plot field extrapolated to nodes
+    """Plot field on gauss points
 
     Parameters
     ----------
@@ -126,7 +127,9 @@ def field(field,
     points = field[:, [0, 1]]  # data points coordinate
     values = field[:, 2]  # data values at points
 
-    field2d(points, values * fieldmagf, ax, orientation, cbar_label, **kwargs)
+    field2d(points * geometrymagf,
+            values * fieldmagf,
+            ax, orientation, cbar_label, **kwargs)
     ax.set_aspect('equal')
 
 
