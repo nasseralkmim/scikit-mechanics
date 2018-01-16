@@ -44,13 +44,25 @@ class Material(object):
         except KeyError:
             raise Exception('Missing nu')
 
+        # Add additional material parametrs if they exist in mat_dic
+        # hardening modulus
+        try:
+            self.H = mat_dic['H']
+        except KeyError:
+            pass
+        # yield stress
+        try:
+            self.sig_y0 = mat_dic['sig_y0']
+        except KeyError:
+            pass
+
         self.case = case
         # convert from plane stress to plane strain
         if case == 'strain':
             for region, E in self.E.items():
                 self.E[region] = (E / (1 - self.nu[region]**2))
             for region, nu in self.nu.items():
-                self.nu[region] = (nu/(1 - nu))
+                self.nu[region] = (nu / (1 - nu))
 
 
 if __name__ is '__main__':
