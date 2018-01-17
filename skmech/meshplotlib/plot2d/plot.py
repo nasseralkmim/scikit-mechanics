@@ -9,6 +9,7 @@ from .elements2dlabel import elements2dlabel
 from .boundarylines2dlabel import boundarylines2dlabel
 from .surfaces2dlabel import surfaces2dlabel
 from .field2d import field2d
+from .field2d import field2d_nodes
 
 
 def geometry2(model,
@@ -131,6 +132,40 @@ def field(field,
             values * fieldmagf,
             ax, orientation, cbar_label, **kwargs)
     ax.set_aspect('equal')
+    return None
+
+
+def field_nodes(field, component, model, ax,
+                orientation='vertical',
+                cbar_label='Stress',
+                element_color='white',
+                fieldmagf=1,
+                geometrymagf=1,
+                magf=1,
+                **kwargs):
+    """Plot field on nodes
+
+    Parameters
+    ----------
+    field : dict {node_id: [sx, sy, sxy]}
+    component : int {1, 2, 3}
+        field compoenent 1 for sxx (s11), 2 for syy (s22) and 3 for sxy (s12)
+    """
+    # -1 because index starts at 0
+    values = np.array([field[nid][component - 1]
+                       for nid in model.mesh.nodes.keys()])
+
+    points = np.array([xyz[[0, 1]] for xyz in model.mesh.nodes.values()])
+
+    # -1 because starts at 0
+    conn = np.array([cn[4:] for cn in model.elements.values()]) - 1
+
+    field2d_nodes(points, conn,
+                  values * fieldmagf,
+                  ax, orientation, cbar_label, **kwargs)
+    ax.set_aspect('equal')
+
+    return None
 
 
 def update_nodes_coordinate(nodes, displ, magf):
