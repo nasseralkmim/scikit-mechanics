@@ -2,9 +2,9 @@
 import numpy as np
 
 
-def state_update_mises(E, nu, H, sig_y0,  # material properties
-                       eps_e_trial, eps_bar_p_trial,  # internal variables
-                       max_local_iteration=10):  # others
+def state_update_mises(E, nu, H, sig_y0,
+                       eps_e_trial, eps_bar_p_trial,
+                       max_num_local_iter):
     """State update procedure considering von Mises yield criterion
 
     Update variables by solving the nonlinear constitutive equations using
@@ -35,8 +35,8 @@ def state_update_mises(E, nu, H, sig_y0,  # material properties
     those variables updated
 
     """
-    # initialize internal variable for plastic multiplier variation
-    dgama = 0.
+    # initializa plastic multiplier variation
+    dgama = 0
 
     # material properties
     G = E / (2 * (1 + nu))      # shear modulus
@@ -55,6 +55,7 @@ def state_update_mises(E, nu, H, sig_y0,  # material properties
     J2 = (0.5) * (2 * G)**2 * (eps_d[0]**2 + eps_d[1]**2 + 2 * eps_d[2]**2)
     q_trial = np.sqrt(3 * J2)
 
+    # print(f'qtrial {q_trial:.1e} eps_e_trail {eps_e_trial}')
     # set initial cummulative plastic strain using previously converged value
     # use set of internal variable at previous step (n)
     # no step indicates for update variable
@@ -66,24 +67,24 @@ def state_update_mises(E, nu, H, sig_y0,  # material properties
 
     # yield function
     Phi = q_trial - sig_y
-
+    # print(f'Phi {Phi}')
     if Phi >= 0:
         # plastic step
         # TODO: compare this NR with analytic
         # TODO: later add internal variables
-        # sig, eps_e, eps_bar_e, dgama = local_constitutive_newton_raphson(
-        #     max_local_iteration,
-        #     dgama, Phi, eps_bar_p, q_trial,
+        # sig, eps_e, eps_bar_p, dgama = local_constitutive_newton_raphson(
+        #     max_num_local_iter,
+        #     Phi, eps_bar_p, q_trial,
         #     p, eps_d, eps_v,
         #     G, H, sig_y0)  # material parameters
 
         # first considering linear hardening function
         # TODO: use this to test the NR implementation above
-        sig, eps_e, eps_bar_e, dgama = local_constitutive_linear_hardening(
+        sig, eps_e, eps_bar_p, dgama = local_constitutive_linear_hardening(
             Phi, G, H, eps_d, q_trial, p, eps_v, eps_bar_p)
-
         # elastoplastic flag, if True plastic step
-        elastoplastic_flag = True
+        ep_flag = True
+
     else:
         # elastic step
         sig = 2 * G * eps_d + p * np.array([1, 1, 0])
@@ -91,12 +92,12 @@ def state_update_mises(E, nu, H, sig_y0,  # material properties
         # Note: eps_bar_p and dgama don't change in the elastic step
 
         # elastoplastic flag, if False elastic step
-        elastoplastic_flag = False
+        ep_flag = False
 
-    return sig, eps_e, eps_bar_p, dgama, elastoplastic_flag
+    return sig, eps_e, eps_bar_p, dgama, ep_flag
 
 
-def local_constitutive_linear_hardening(Phi, H, G, eps_d, q_trial, p, eps_v,
+def local_constitutive_linear_hardening(Phi, G, H, eps_d, q_trial, p, eps_v,
                                         eps_bar_p):
     """Solves the local constitutive equations with linear hardening function
 
@@ -132,6 +133,8 @@ def local_constitutive_linear_hardening(Phi, H, G, eps_d, q_trial, p, eps_v,
 
     # update elastic strain
     eps_e = 1 / (2 * G) * sig_d + (1 / 3) * eps_v * np.array([1, 1, 0])
+    # convert back to engineering strain
+    eps_e[2] = 2 * eps_e[2]
 
     # update cummulative plastic strain
     eps_bar_p = eps_bar_p + dgama
@@ -140,8 +143,8 @@ def local_constitutive_linear_hardening(Phi, H, G, eps_d, q_trial, p, eps_v,
 
 
 def local_constitutive_newton_raphson(
-        max_local_iteration,
-        dgama, Phi, eps_bar_p, q_trial,
+        max_num_local_iter,
+        Phi, eps_bar_p, q_trial,
         p, eps_d, eps_v,
         G, H, sig_y0,  # material parameters
         tol=1e-6):
@@ -154,7 +157,7 @@ def local_constitutive_newton_raphson(
 
     Parameters
     ----------
-    max_local_iteration : int (default=10)
+    max_num_local_iter : int (default=10)
         Maximum number of iterations allowed for the local Newton-Raphson
         procedure.
     tol : float (default=1e-6)
@@ -168,7 +171,8 @@ def local_constitutive_newton_raphson(
     dgama : float
 
     """
-    for k in range(1, max_local_iteration):
+    dgama = 0
+    for k in range(1, max_num_local_iter):
         # residual derivative with respect to dgama
         # the Phi function is already in a residual form
         # TODO: right now i'm considering only linear hardening H
@@ -194,10 +198,11 @@ def local_constitutive_newton_raphson(
             eps_e = fact * eps_d + eps_v / 3 * np.array([1, 1, 0])
             eps_e[2] = eps_e[2] * 2  # convert back to engineering strain
 
+            return sig, eps_e, eps_bar_p, dgama
             # break our of the NR loop
             break
-
-    return sig, eps_e, eps_bar_p, dgama
+    else:
+        raise Exception('Local Newton-Raphson did not converge')
 
 
 if __name__ == '__main__':

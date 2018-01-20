@@ -6,6 +6,7 @@ from .mesh import gmsh
 from .mesh.mesh import Mesh
 from .material import Material
 from .solvers import statics
+from .solvers import loadincrement
 # from .postprocess import plotter
 from .constructor import constructor
 from .neumann import neumann

@@ -8,6 +8,8 @@ def consistent_tangent_mises(dgama, sig, E, nu, H, elastoplastic_flag):
     Parameters
     ----------
     dgama : float
+        Incremental plastic multiplier obtained from the previous global
+        equilibrium iteration (global Newton-Raphson)
     elastoplastic_flag : boolean
         If true return elastoplastic tangent matrix, if false returns the
         elastic tangent matrix
@@ -59,14 +61,13 @@ def consistent_tangent_mises(dgama, sig, E, nu, H, elastoplastic_flag):
     # equivalent von Mises
     # using the converged stress value to compute trial
     q_trial = np.sqrt(3 / 2) * s_norm + 3 * G * dgama
-    print('q_trial', q_trial)
-    # Factors in Eq. 7.120 Neto 2008
-    Afactor = 2 * G * (1 - 3 * G * dgama / q_trial)
-    # TODO: considering only linear hardening curve with modulus H
-    Bfactor = (6 * G**2 *
-               (dgama / q_trial - 1 / (3 * G - H)) / s_norm**2)
 
     if elastoplastic_flag is True:
+        # Factors in Eq. 7.120 Neto 2008
+        Afactor = 2 * G * (1 - 3 * G * dgama / q_trial)
+        # TODO: considering only linear hardening curve with modulus H
+        Bfactor = (6 * G**2 *
+                   (dgama / q_trial - 1 / (3 * G + H)) / s_norm**2)
         # consistent tangent modulus Eq. 7.120 Neto 2008
         D = (Afactor * dev_sym_proj +
              Bfactor * np.outer(s, s) +
