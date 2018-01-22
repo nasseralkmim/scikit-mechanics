@@ -19,6 +19,7 @@ class Quad4(Element):
     """
     def __init__(self, eid, model, EPS0=None):
         super().__init__(eid, model)
+        self.case = model.material.case
         self.conn = self._get_connectivity(model.elements)
         self.physical_surf = self._get_physical_surface(model.elements)
         self.xyz = self._get_nodes_coordinates(model.mesh.nodes)
@@ -46,7 +47,7 @@ class Quad4(Element):
         return np.array([nodes[nid][:2] for nid in self.conn])
 
     def _get_material(self, material):
-        """get material property"""
+        """get elastic material property"""
         try:
             E = material.E[self.physical_surf]
             nu = material.nu[self.physical_surf]
@@ -360,13 +361,18 @@ class Quad4(Element):
         else:
             nu = self.nu
 
+        # convert elastic properties
+        if self.case == 'strain':
+            E = E / (1 - nu**2)
+            nu = nu / (1 - nu)
+
         C = np.zeros((3, 3))
         C[0, 0] = 1.0
         C[1, 1] = 1.0
         C[1, 0] = nu
         C[0, 1] = nu
-        C[2, 2] = (1.0 - nu)/2.0
-        C = (E/(1.0 - nu**2.0))*C
+        C[2, 2] = (1.0 - nu) / 2.0
+        C = (E / (1.0 - nu**2.0)) * C
 
         return C
 

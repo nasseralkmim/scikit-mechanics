@@ -31,6 +31,7 @@ class Quad4Enr(Quad4):
 
     """
     def __init__(self, eid, model, EPS0=None):
+        self.case = model.material.case
         self.eid = eid
         self.mesh = model.mesh
         self.num_quad_points = model.num_quad_points[eid]

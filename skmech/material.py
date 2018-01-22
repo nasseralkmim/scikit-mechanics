@@ -6,12 +6,12 @@ class Material(object):
 
     Parameters
     ----------
-    case (str)
-        'strain' or 'stress' for plane problems
+    case : str {'stress', 'strain'}
+        Plane stress or plane strain cases
 
     Attributes
     ----------
-    mat_dic keywords (dict)
+    mat_dic keywords : dict
         dictionary with surface label and material paramenter value.
 
         Example:
@@ -57,12 +57,6 @@ class Material(object):
             pass
 
         self.case = case
-        # convert from plane stress to plane strain
-        if case == 'strain':
-            for region, E in self.E.items():
-                self.E[region] = (E / (1 - self.nu[region]**2))
-            for region, nu in self.nu.items():
-                self.nu[region] = (nu / (1 - nu))
 
 
 if __name__ is '__main__':
