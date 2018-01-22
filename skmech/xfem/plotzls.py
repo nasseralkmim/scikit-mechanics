@@ -25,7 +25,7 @@ def plot_zls(zls, ax, plot_cbar=True, **kwargs):
         X, Y = zls.grid_x, zls.grid_y
 
     ax.contour(X, Y, zlsmask, levels=[0], **kwargs)
-    c = ax.contourf(X, Y, zlsmask, rasterize=True)
+    c = ax.contourf(X, Y, zlsmask)
     if plot_cbar:
         cbar = plt.colorbar(c)
         if np.max(zlsmask) == 1 and np.min(zlsmask) == -1:

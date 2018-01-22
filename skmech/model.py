@@ -26,7 +26,7 @@ class Model(object):
     """
     def __init__(self, mesh, material=None, traction=None,
                  displacement_bc=None, body_forces=None, zerolevelset=None,
-                 num_quad_points=4, thickness=1., etypes=[3]):
+                 num_quad_points=2, thickness=1., etypes=[3]):
         self.mesh = mesh
         self.material = material
         self.traction = traction
@@ -34,6 +34,7 @@ class Model(object):
         self.displacement_bc = displacement_bc
         self.thickness = thickness
 
+        # solution after calling the solver
         self.dof_displacement = 0
 
         self.etypes = etypes
@@ -87,6 +88,7 @@ class Model(object):
 
         This is done based on nodal tag, element type and number of dof
         per node.
+        Starts at 1.
 
         Returns
         -------
@@ -98,7 +100,7 @@ class Model(object):
         dof = {}
         for nid, _ in self.mesh.nodes.items():
             dof[nid] = [nid * self.num_dof_node - 1 + i
-                            for i in range(self.num_dof_node)]
+                        for i in range(self.num_dof_node)]
         return dof
 
     def _get_elements(self, elements):

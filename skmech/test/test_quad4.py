@@ -6,7 +6,7 @@ import skmech
 class Mesh():
     pass
 
-
+# 4 element with offset center node
 msh = Mesh()
 msh.nodes = {
     1: [0, 0, 0],

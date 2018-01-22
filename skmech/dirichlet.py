@@ -42,6 +42,7 @@ def dirichlet(K, F, model):
                         K[:, dof[1]] = 0
                         K[dof[1], dof[1]] = 1  # diagonal equal 1
                         F[dof[1]] = d_vector[1]
+                # physical lines
                 if etype == 1:
                     node_1, node_2 = edata[-2], edata[-1]
                     dof_1 = np.array(model.nodes_dof[node_1]) - 1

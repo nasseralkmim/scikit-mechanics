@@ -14,7 +14,7 @@ def solver(model, t=1):
     model : Build instance
         object containing all problem paramenters
 
-    Return
+   Return
     -------
     u : dict
         dictionary with node id and displacement
@@ -35,6 +35,7 @@ def solver(model, t=1):
     P = P + Pt
     Km, Pm = dirichlet(K, P, model)
     U = np.linalg.solve(Km, Pm)
+    # add current dof displacement to model
     model.set_dof_displacement(U)
     u = dof2node(U, model)
     end = time.time()

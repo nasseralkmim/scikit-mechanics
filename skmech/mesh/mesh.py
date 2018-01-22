@@ -25,4 +25,4 @@ class Mesh(object):
     """
     def __init__(self, mesh_file):
         self.nodes, self.elements = parse_msh(mesh_file)
-        self.name = mesh_file.split(".", 1)
+        self.name = mesh_file.split(".", 1)[0]

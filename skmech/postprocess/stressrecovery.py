@@ -1,5 +1,10 @@
 """Compute the stress for each node
 
+TODO: extrapolate nodes from gp to nodes, append the stress to a dictionary
+    list
+    with the node as key. Then average the values in this list after the
+    element loop.
+
 """
 import numpy as np
 from ..constructor import constructor
@@ -226,7 +231,7 @@ def stress_recovery(model, t=1):
     model : Model object
         object with model attributes
     t : float, default 1
-    time
+        time
 
     Returns
     -------
