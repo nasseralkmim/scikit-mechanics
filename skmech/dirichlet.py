@@ -20,6 +20,9 @@ def dirichlet(K, F, model):
         Modified array
 
     """
+    # make a copy of arrays to not modify the original ones
+    K = np.copy(K)
+    F = np.copy(F)
     if model.displacement_bc is not None:
         for d_location, d_vector in model.displacement_bc.items():
             physical_element = model.get_physical_element(d_location)
