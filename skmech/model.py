@@ -26,12 +26,14 @@ class Model(object):
     """
     def __init__(self, mesh, material=None, traction=None,
                  displacement_bc=None, body_forces=None, zerolevelset=None,
+                 imposed_displ=None,
                  num_quad_points=2, thickness=1., etypes=[3]):
         self.mesh = mesh
         self.material = material
         self.traction = traction
         self.body_forces = body_forces
         self.displacement_bc = displacement_bc
+        self.imposed_displ = imposed_displ
         self.thickness = thickness
 
         # solution after calling the solver
