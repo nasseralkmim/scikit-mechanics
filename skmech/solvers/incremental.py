@@ -2,6 +2,7 @@
 import numpy as np
 import time
 from ..dirichlet import dirichlet
+from ..dirichlet import imposed_displacement
 from ..neumann import neumann
 from ..constructor import constructor
 from ..plasticity.stateupdatemises import state_update_mises
@@ -11,6 +12,7 @@ from ..meshplotlib.gmshio.gmshio import write_field
 
 
 def solver(model, load_increment=None,
+           imposed_displ=None,
            num_load_increments=10,
            max_num_iter=5, tol=1e-6,
            max_num_local_iter=100):
@@ -78,9 +80,6 @@ def solver(model, load_increment=None,
         f_ext = lmbda * f_ext_bar  # load vector for this pseudo time step
 
         # Initial parameters for N-R
-        # ---------
-        # (i) k = 0
-        # ---------
         # Initial displacement increment for all dof
         du = np.zeros(num_dof)
 
@@ -96,6 +95,22 @@ def solver(model, load_increment=None,
                                                max_num_local_iter)
             # compute global residual vector
             r = f_int - f_ext
+
+            # apply boundary condition for displacement control case
+            if model.imposed_displ is not None:
+                # Make a copy of the imposed displacement
+                imposed_displ = dict(model.imposed_displ)
+                for line, (d1, d2) in imposed_displ.items():
+                    if d1 is not None:
+                        d1 *= lmbda
+                    if d2 is not None:
+                        d2 *= lmbda
+                    # update dictionary with this load factor
+                    imposed_displ[line] = (d1, d2)
+                # update model displacement bc in order to enforce this
+                # load step displacement
+                model.displacement_bc.update(imposed_displ)
+
             # apply boundary conditions modify mtrix and vectors
             K_T_m, r_m = dirichlet(K_T, r, model)
             # compute the N-R correction (delta u)
@@ -109,7 +124,8 @@ def solver(model, load_increment=None,
             # check convergence
             err = np.linalg.norm(r)
             energy_norm = du.T @ r
-            print(f'Iteration {k + 1} error {err:.1e}')
+            print(f'Iteration {k + 1} error {err:.1e} '
+                  f'energy norm {energy_norm:.1e}')
             if err <= tol:
                 # solution converged +1 because it started in 0
                 print(f'Converged with {k + 1} iterations error {err:.1e} '
@@ -292,6 +308,7 @@ def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
             k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
 
         # Build global matrices outside the quadrature loop
+        # += because elements can share same dof
         f_int[element.id_v] += f_int_e
         K_T[element.id_m] += k_T_e
 
@@ -304,15 +321,12 @@ def external_load_vector(model):
     Note
     ----
     Reference Eq. 4.68 Neto 2008
-    Loop over elements and assemble load vector due tractions
 
     """
     # TODO: add body force later
     # only traction vector for now
-    # not necessary to loop over elements
     Pt = neumann(model)
     return Pt
-
 
 if __name__ == '__main__':
     pass
