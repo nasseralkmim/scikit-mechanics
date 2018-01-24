@@ -328,5 +328,25 @@ def external_load_vector(model):
     Pt = neumann(model)
     return Pt
 
+
+def get_free_dof(model):
+    """Get the free dof list
+    
+    Ignore supports for now
+
+    """
+    restrained_dof = []
+    for d_location, d_vector in model.imposed_displ.items():
+        physical_element = model.get_physical_element(d_location)
+        for eid, [etype, *edata] in physical_element.items():
+            restrained_dof.extend(model.nodes_dof[eid])
+    all_dof = []
+    for nid, dof in model.nodes_dof.items():
+        all_dof.extend(dof)
+    print(all_dof)
+    free_dof = list(set(all_dof) - set(restrained_dof))
+    return free_dof
+
+
 if __name__ == '__main__':
     pass
