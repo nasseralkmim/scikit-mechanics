@@ -12,7 +12,6 @@ from ..meshplotlib.gmshio.gmshio import write_field
 
 
 def solver(model, load_increment=None,
-           imposed_displ=None,
            num_load_increments=10,
            max_num_iter=5, tol=1e-6,
            max_num_local_iter=100):
@@ -58,78 +57,136 @@ def solver(model, load_increment=None,
     # num_quad_poins for each dimension, multiply by 2 for plane problems
     eps_e_n = {(eid, gp): np.zeros(3) for eid in model.elements.keys()
                for gp in range(model.num_quad_points[eid] * 2)}
-
     eps_bar_p_n = {(eid, gp): 0 for eid in model.elements.keys()
                    for gp in range(model.num_quad_points[eid] * 2)}
-
     # initialize dict to store incremental plastic multiplier
     # used to compute the consistent tangent matrix
     dgamma_n = {(eid, gp): 0 for eid in model.elements.keys()
                 for gp in range(model.num_quad_points[eid] * 2)}
+    # initialize displacement to compute internal force vector
+    # at firt iteration of each step
+    sig_n = {(eid, gp): np.zeros(3) for eid in model.elements.keys()
+             for gp in range(model.num_quad_points[eid] * 2)}
 
     # external load vector
     # Only traction for now
     # TODO: external_load_vector function DONE for traction only
     f_ext_bar = external_load_vector(model)
 
+    # if model.imposed_displ is not None:
+    #     free_dof, restrained_dof = get_free_restrained_dof(model)
+    #     # set up incidence for free dofs
+    #     ff = np.ix_(free_dof, free_dof)
+    #     fp = np.ix_(free_dof, restrained_dof)
+
+    # initial internal load vector
+    f_int = np.zeros(num_dof)
+
+    old_lmbda = 0
     # Loop over load increments
     for incr_id, lmbda in enumerate(load_increment):
         print('--------------------------------------')
         print(f'Load increment {lmbda:.2f}:')
         print('--------------------------------------')
-        f_ext = lmbda * f_ext_bar  # load vector for this pseudo time step
+
+        # load vector for this pseudo time step
+        f_ext = lmbda * f_ext_bar
 
         # Initial parameters for N-R
         # Initial displacement increment for all dof
         du = np.zeros(num_dof)
 
+        # initial stress for this time step, use the converged
+        # value from previous step
+        sig = sig_n
+
         # Begin global Newton-Raphson
         for k in range(0, max_num_iter):
-            # (ii) & (iii) Tangent stiffness matrix and residual
-            # k = 0 -> du = 0
-            # build internal load vector and consistent tangent matrix
-            f_int, K_T, int_var = local_solver(model, num_dof, du,
-                                               eps_e_n,
-                                               eps_bar_p_n,
-                                               dgamma_n,
-                                               max_num_local_iter)
-            # compute global residual vector
-            r = f_int - f_ext
+            # build first tangent stiffness matrix
+            # K_T(sig_k, internal_variables_n)
+            # later it will be built on the local solver
+            if k == 0:
+                # build consistent tangent matrix using updated sig
+                # ep_flag = False considers first iteration elastic always
+                K_T = build_tangent_stiffness(model, num_dof, sig, dgamma_n,
+                                              ep_flag=False)
 
-            # apply boundary condition for displacement control case
-            if model.imposed_displ is not None:
-                # Make a copy of the imposed displacement
-                imposed_displ = dict(model.imposed_displ)
-                for line, (d1, d2) in imposed_displ.items():
-                    if d1 is not None:
-                        d1 *= lmbda
-                    if d2 is not None:
-                        d2 *= lmbda
-                    # update dictionary with this load factor
-                    imposed_displ[line] = (d1, d2)
-                # update model displacement bc in order to enforce this
-                # load step displacement
-                model.displacement_bc.update(imposed_displ)
+                # apply boundary condition for displacement control case
+                # apply at every time step only in the first iteration
+                if model.imposed_displ is not None:
+                    # Make a copy of the imposed displacement
+                    imposed_displ = dict(model.imposed_displ)
+                    for line, (d1, d2) in imposed_displ.items():
+                        if d1 is not None:
+                            d1 /= len(load_increment) * np.sign(lmbda -
+                                                                old_lmbda)
+                        if d2 is not None:
+                            d2 /= len(load_increment) * np.sign(lmbda -
+                                                                old_lmbda)
+                        # update dictionary with this load factor
+                        imposed_displ[line] = (d1, d2)
+                    # update model displacement bc in order to enforce this
+                    # load step displacement
+                    model.displacement_bc.update(imposed_displ)
+                    old_lmbda = lmbda
+
+            # remove boundary conditions from model.displacement_bc list
+            # so they don't add every iteration, only in the begining of
+            # time step
+            if k == 1:
+                if model.imposed_displ is not None:
+                    new_bc = {}
+                    for line, (d1, d2) in imposed_displ.items():
+                        model.displacement_bc.pop(line)
+                        new_bc[line] = (0, 0)
+                    # add 0, 0 displacement so the imposed displacement does
+                    # not change
+                    model.displacement_bc.update(new_bc)
+
+            # compute global residual vector
+            r = f_ext - f_int
 
             # apply boundary conditions modify mtrix and vectors
             K_T_m, r_m = dirichlet(K_T, r, model)
             # compute the N-R correction (delta u)
-            nr_correction = - np.linalg.solve(K_T_m, r_m)
+            nr_correction = np.linalg.solve(K_T_m, r_m)
+
             # displacement increment on the NR k loop, du starts at 0
             # for each load step
             du += nr_correction
             # update displacement with increment
             u += nr_correction
+            # build internal load vector and solve local constitutive equation
+            f_int, K_T, int_var = local_solver(model, num_dof, du,
+                                               eps_e_n,
+                                               eps_bar_p_n,
+                                               dgamma_n,
+                                               max_num_local_iter)
 
-            # check convergence
-            err = np.linalg.norm(r)
-            energy_norm = du.T @ r
+            if model.imposed_displ is not None:
+                # check if internal nodal forces are in equilibrium
+                err = abs(sum(f_int))
+            else:
+                # check convergence with the new internal load vector
+                err = np.linalg.norm(f_int - f_ext)
+
+            energy_norm = du.T @ (r)   # from Simo
+            # get energy norm from the first iteration step
+            if k == 0:
+                energy_norm_0 = energy_norm
+
+            if energy_norm_0 != 0:
+                conv_criteria = energy_norm / energy_norm_0
+            else:
+                conv_criteria = energy_norm
+
             print(f'Iteration {k + 1} error {err:.1e} '
-                  f'energy norm {energy_norm:.1e}')
-            if err <= tol:
+                  f'energy norm ratio {conv_criteria:.1e}')
+
+            if (conv_criteria <= 1e-9 and k >= 1) or err <= tol:
                 # solution converged +1 because it started in 0
                 print(f'Converged with {k + 1} iterations error {err:.1e} '
-                      f'Energy norm {energy_norm:.1e}')
+                      f'Energy norm ratio {conv_criteria:.1e}')
 
                 # TODO: store variable in an array DONE
                 displ[:, incr_id] = u
@@ -141,6 +198,8 @@ def solver(model, load_increment=None,
                 eps_bar_p_n = int_var['eps_bar_p']
                 # update incremental plastic multiplier
                 dgamma_n = int_var['dgamma']
+                # update stress
+                sig_n = int_var['sig']
 
                 # TODO: save internal variables to a file DONE
                 displ_dic = dof2node(u, model)
@@ -227,7 +286,8 @@ def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
     # dictionary with local variables
     # new every local N-R iteration
     # use to save converged value
-    int_var = {'eps_e': {}, 'eps_bar_p': {}, 'sig_ele': {}, 'dgamma': {}}
+    int_var = {'eps_e': {}, 'eps_bar_p': {}, 'sig_ele': {},
+               'dgamma': {}, 'sig': {}}
 
     # Loop over elements
     for eid, [etype, *edata] in model.elements.items():
@@ -279,7 +339,7 @@ def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
             # update internal variables for this gauss point
             sig, eps_e, eps_bar_p, dgamma, ep_flag = state_update_mises(
                 E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial,
-                max_num_local_iter)
+                max_num_local_iter, model.material.case)
 
             # print(f'gp {gp_id} eps_bar_p {eps_bar_p:.1e} dgamma {dgamma:.1e}'
             #       f'plastic? {ep_flag}')
@@ -291,6 +351,7 @@ def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
             int_var['eps_e'][(eid, gp_id)] = eps_e
             int_var['eps_bar_p'][(eid, gp_id)] = eps_bar_p
             int_var['dgamma'][(eid, gp_id)] = dgamma
+            int_var['sig'][(eid, gp_id)] = sig
 
             # average of gauss point stress for element stress
             int_var['sig_ele'][eid] += sig / len(element.gauss.weights)
@@ -302,7 +363,8 @@ def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
             # TODO: ep_flag comes from the state update? DONE
             # use dgama from previous global iteration
             D = consistent_tangent_mises(
-                dgamma_n[(eid, gp_id)], sig, E, nu, H, ep_flag)
+                dgamma_n[(eid, gp_id)], sig, E, nu, H, ep_flag,
+                model.material.case)
 
             # element consistent tanget matrix (gaussian quadrature)
             k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
@@ -313,6 +375,59 @@ def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
         K_T[element.id_m] += k_T_e
 
     return f_int, K_T, int_var
+
+
+def build_tangent_stiffness(model, num_dof, sig, dgamma_n, ep_flag):
+    """Build consistent tangent matrix
+
+    Parameters
+    ----------
+    sig : dict {(eid, gp_id): ndarray shape (3,)}
+        Stress from previous iteration
+
+    """
+    # initialize global vector and matrices
+    K_T = np.zeros((num_dof, num_dof))
+    # Loop over elements
+    for eid, [etype, *edata] in model.elements.items():
+        # create element object
+        element = constructor(eid, etype, model)
+
+        # material properties
+        E, nu = element.E, element.nu
+        # Hardening modulus
+        try:
+            H = model.material.H[element.physical_surf]
+        except (AttributeError, KeyError) as err:
+            raise Exception('Missing material property H and sig_y0 in'
+                            'the material object')
+        # initialize array for element consistent tangent matrix
+        k_T_e = np.zeros((8, 8))
+
+        # loop over quadrature points
+        for gp_id, [w, gp] in enumerate(zip(element.gauss.weights,
+                                            element.gauss.points)):
+            # build element strain-displacement matrix shape (3, 8)
+            N, dN_ei = element.shape_function(xez=gp)
+            dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
+            B = element.gradient_operator(dN_xi)
+
+            sig_ele = sig[(eid, gp_id)]
+
+            # use dgama from previous global iteration
+            D = consistent_tangent_mises(
+                dgamma_n[(eid, gp_id)],
+                sig_ele, E, nu, H, ep_flag,
+                model.material.case)
+
+            # element consistent tanget matrix (gaussian quadrature)
+            k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
+
+        # Build global matrices outside the quadrature loop
+        # += because elements can share same dof
+        K_T[element.id_m] += k_T_e
+
+    return K_T
 
 
 def external_load_vector(model):
@@ -329,9 +444,9 @@ def external_load_vector(model):
     return Pt
 
 
-def get_free_dof(model):
+def get_free_restrained_dof(model):
     """Get the free dof list
-    
+
     Ignore supports for now
 
     """
@@ -343,10 +458,53 @@ def get_free_dof(model):
     all_dof = []
     for nid, dof in model.nodes_dof.items():
         all_dof.extend(dof)
-    print(all_dof)
+
     free_dof = list(set(all_dof) - set(restrained_dof))
-    return free_dof
+    return np.array(free_dof) - 1, np.array(restrained_dof) - 1
 
 
 if __name__ == '__main__':
-    pass
+    import skmech
+    class Mesh():
+        pass
+
+    # 4 element with offset center node
+    msh = Mesh()
+    msh.nodes = {
+        1: [0, 0, 0],
+        2: [1, 0, 0],
+        3: [1, 1, 0],
+        4: [0, 1, 0],
+        5: [.5, 0, 0],
+        6: [1, .5, 0],
+        7: [.5, 1, 0],
+        8: [0, .5, 0],
+        9: [.4, .6]
+    }
+    msh.elements = {
+        1: [15, 2, 12, 1, 1],
+        2: [15, 2, 13, 2, 2],
+        3: [1, 2, 7, 2, 2, 6],
+        4: [1, 2, 7, 2, 6, 3],
+        7: [1, 2, 5, 4, 4, 8],
+        8: [1, 2, 5, 4, 8, 1],
+        9: [3, 2, 11, 10, 1, 5, 9, 8],
+        10: [3, 2, 11, 10, 5, 2, 6, 9],
+        11: [3, 2, 11, 10, 9, 6, 3, 7],
+        12: [3, 2, 11, 10, 8, 9, 7, 4]
+    }
+    material = skmech.Material(E={11: 10000}, nu={11: 0.3})
+    traction = {5: (-1, 0), 7: (1, 0)}
+    displacement_bc = {12: (0, 0)}
+    imposed_displacement = {13: (10, None)}
+    model = skmech.Model(
+        msh,
+        material=material,
+        traction=traction,
+        imposed_displ=imposed_displacement,
+        displacement_bc=displacement_bc,
+        num_quad_points=2)
+
+    print(get_free_dof(model))
+
+
