@@ -87,8 +87,23 @@ def state_update_mises(E, nu, H, sig_y0,
 
     else:
         # elastic step
-        sig = 2 * G * eps_d + p * np.array([1, 1, 0])
+        # Eq. 4.51 Simo 2008
+        # local Is fourth order symmetric identity tensor in equivalent matrix
+        fourth_sym_I = np.array([
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, .5]])
+        # local second order identity tensor in vector form
+        second_i = np.array([1, 1, 0])
+        if material_case == 'strain':
+            A = 1
+        elif material_case == 'stress':
+            A = 2 * G / (K + 4 / 3 * G)
+        # material elasticity matrix
+        De = 2 * G * fourth_sym_I + A * (K - 2 / 3 * G) * np.outer(second_i,
+                                                                   second_i)
         eps_e = eps_e_trial
+        sig = De @ eps_e
         # Note: eps_bar_p and dgama don't change in the elastic step
 
         # elastoplastic flag, if False elastic step

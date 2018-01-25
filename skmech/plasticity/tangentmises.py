@@ -74,7 +74,12 @@ def consistent_tangent_mises(dgama, sig, E, nu, H, elastoplastic_flag):
              K * np.outer(second_i, second_i))
     else:
         # elastic consistent tangent modulus Eq. 4.51 & 7.107 Neto 2008
-        D = 2 * G * dev_sym_proj + K * np.outer(second_i, second_i)
+        # equation 7.107 is only for plane strain
+        if material_case == 'strain':
+            D = 2 * G * dev_sym_proj + K * np.outer(second_i, second_i)
+        if material_case == 'stress':
+            D = 2 * G * fourth_sym_I + (K - 2 / 3 * G) * (
+                (2 * G / (K + 4 / 3 * G)) * np.outer(second_i, second_i))
     return D
 
 
