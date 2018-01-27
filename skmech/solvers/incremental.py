@@ -149,44 +149,37 @@ def solver(model, load_increment=None,
             # apply boundary conditions modify mtrix and vectors
             K_T_m, r_m = dirichlet(K_T, r, model)
             # compute the N-R correction (delta u)
-            nr_correction = np.linalg.solve(K_T_m, r_m)
+            newton_correction = np.linalg.solve(K_T_m, r_m)
 
             # displacement increment on the NR k loop, du starts at 0
             # for each load step
-            du += nr_correction
+            du += newton_correction
             # update displacement with increment
-            u += nr_correction
+            u += newton_correction
             # build internal load vector and solve local constitutive equation
             f_int, K_T, int_var = local_solver(model, num_dof, du,
                                                eps_e_n,
                                                eps_bar_p_n,
                                                dgamma_n,
                                                max_num_local_iter)
+            # new residual
+            r_updt = f_int - f_ext
 
-            if model.imposed_displ is not None:
-                # check if internal nodal forces are in equilibrium
-                err = abs(sum(f_int))
-            else:
-                # check convergence with the new internal load vector
-                err = np.linalg.norm(f_int - f_ext)
-
-            energy_norm = du.T @ (r)   # from Simo
-            # get energy norm from the first iteration step
+            # get reference values to check convergence
             if k == 0:
-                energy_norm_0 = energy_norm
+                r_ref = r_updt
+                newton_correction_ref = newton_correction
 
-            if energy_norm_0 != 0:
-                conv_criteria = energy_norm / energy_norm_0
-            else:
-                conv_criteria = energy_norm
+            convergence, error, error_type = convergence_tests(
+                newton_correction, r_updt,
+                newton_correction_ref, r_ref, tol)
 
-            print(f'Iteration {k + 1} error {err:.1e} '
-                  f'energy norm ratio {conv_criteria:.1e}')
+            print(f'Iteration {k + 1} error {error:.1e}/type: {error_type}')
 
-            if (conv_criteria <= 1e-9 and k >= 1) or err <= tol:
+            if convergence is True:
                 # solution converged +1 because it started in 0
-                print(f'Converged with {k + 1} iterations error {err:.1e} '
-                      f'Energy norm ratio {conv_criteria:.1e}')
+                print(f'Converged with {k + 1} iterations error {error:.1e}/'
+                      f'type: {error_type}')
 
                 # TODO: store variable in an array DONE
                 displ[:, incr_id] = u
@@ -231,6 +224,40 @@ def solver(model, load_increment=None,
     end = time.time()
     print(f'Solution finished in {end - start:.3f}s')
     return displ, load_increment
+
+
+def convergence_tests(newton_correction, r,
+                      newton_correction_ref,
+                      r_ref, tol):
+    """Converge tests
+
+    From Felipa
+    """
+
+    displ_test = np.sqrt(newton_correction.T @ newton_correction)
+    displ_ref = np.sqrt(newton_correction_ref.T @ newton_correction_ref)
+
+    residual_test = np.sqrt(r.T @ r)
+    residual_ref = np.sqrt(r_ref.T @ r_ref)
+
+    energy_test = np.sqrt(abs(1 / 2 * newton_correction.T @ (- r)))
+    energy_ref = np.sqrt(abs(1 / 2 * newton_correction_ref.T @ (- r_ref)))
+
+    convergence = False
+
+    if displ_test / displ_ref <= tol:
+        error, error_type = displ_test / displ_ref, "Displacement"
+        convergence = True
+    elif residual_test / residual_ref <= tol:
+        error, error_type = residual_test / residual_ref, "Residual"
+        convergence = True
+    elif energy_test / energy_ref <= tol:
+        error, error_type = energy_test / energy_ref, "Energy"
+        convergence = True
+    else:
+        error, error_type = energy_test / energy_ref, "Energy"
+
+    return convergence, error, error_type
 
 
 def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
