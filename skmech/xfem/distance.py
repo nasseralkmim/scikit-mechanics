@@ -37,4 +37,8 @@ def distance(zero_ls, grid_x, grid_y, xyz):
     points = np.vstack((np.ndarray.flatten(grid_x),
                         np.ndarray.flatten(grid_y))).T
     phi = interpolate.griddata(points, values, xyz)
+
+    # substituve nan values to 0
+    phi[np.isnan(phi)] = 0.
+
     return phi
