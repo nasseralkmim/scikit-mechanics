@@ -54,12 +54,57 @@ class Model(object):
         # nodes.coord, nodes.num_dof, nodes.dof, nodes.num_dof_pernode,
         self.nodes_dof = self._generate_dof()
 
+        # connectivity matrices for partinioning the system of equations
+        self.Lf, self.Lr = self.get_connectivity_matrices()
+
         if zerolevelset is None:
             self.xfem = None
         else:
             self.xfem = Xfem(self.nodes, self.elements,
                              zerolevelset, material)
             self.num_dof = self.xfem.num_dof            # update num dof
+
+
+    def get_connectivity_matrices(self):
+        """Compute connectivity matrix for free and restrained dofs"""
+        Lf, Lr = [], []
+        if self.displacement_bc is not None:
+            for d_loc, d_value in self.displacement_bc.items():
+                physical_element = self.get_physical_element(d_loc)
+                for eid, [etype, *edata] in physical_element.items():
+                    # physical points
+                    if etype == 15:
+                        node = edata[-1]  # last entry
+                        dof = np.array(self.nodes_dof[node]) - 1
+                        if d_value[0] is not None:
+                            lr = np.zeros(self.num_dof)
+                            lr[dof[0]] = 1
+                            Lr.append(lr)
+                        if d_value[1] is not None:
+                            lr = np.zeros(self.num_dof)
+                            lr[dof[1]] = 1
+                            Lr.append(lr)
+                    # physical lines
+                    if etype == 1:
+                        node_1, node_2 = edata[-2], edata[-1]
+                        dof_n1 = np.array(self.nodes_dof[node_1]) - 1
+                        dof_n2 = np.array(self.nodes_dof[node_2]) - 1
+                        if d_value[0] is not None:
+                            lr_n1 = np.zeros(self.num_dof)
+                            lr_n1[dof_n1[0]] = 1
+                            Lr.append(lr_n1)
+                            lr_n2 = np.zeros(self.num_dof)
+                            lr_n2[dof_n2[0]] = 1
+                            Lr.append(lr_n2)
+                        if d_value[1] is not None:
+                            lr_n1 = np.zeros(self.num_dof)
+                            lr_n1[dof_n1[1]] = 1
+                            Lr.append(lr_n1)
+                            lr_n2 = np.zeros(self.num_dof)
+                            lr_n2[dof_n2[1]] = 1
+                            Lr.append(lr_n2)
+
+        return np.array(Lf), np.array(Lr)
 
     def set_dof_displacement(self, displacement):
         """Set the dof displacemnt into model attribute"""
