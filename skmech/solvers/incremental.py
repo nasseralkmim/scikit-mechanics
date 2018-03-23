@@ -226,235 +226,40 @@ def solver(model, load_increment=None,
     return displ, load_increment
 
 
-def convergence_tests(newton_correction, r,
-                      newton_correction_ref,
-                      r_ref, tol):
-    """Converge tests
+def solve_partitioned(model, K_T, residual):
+    """Solve partitioned system
 
-    From Felipa
-    """
+    Obtain Newton correction for free degree's of freedom and obtain residual
+    for restrained degree's of freedom
 
-    displ_test = np.sqrt(newton_correction.T @ newton_correction)
-    displ_ref = np.sqrt(newton_correction_ref.T @ newton_correction_ref)
-
-    residual_test = np.sqrt(r.T @ r)
-    residual_ref = np.sqrt(r_ref.T @ r_ref)
-
-    energy_test = np.sqrt(abs(1 / 2 * newton_correction.T @ (- r)))
-    energy_ref = np.sqrt(abs(1 / 2 * newton_correction_ref.T @ (- r_ref)))
-
-    convergence = False
-
-    if displ_test / displ_ref <= tol:
-        error, error_type = displ_test / displ_ref, "Displacement"
-        convergence = True
-    elif residual_test / residual_ref <= tol:
-        error, error_type = residual_test / residual_ref, "Residual"
-        convergence = True
-    elif energy_test / energy_ref <= tol:
-        error, error_type = energy_test / energy_ref, "Energy"
-        convergence = True
-    else:
-        error, error_type = energy_test / energy_ref, "Energy"
-
-    return convergence, error, error_type
-
-
-def local_solver(model, num_dof, du, eps_e_n, eps_bar_p_n, dgamma_n,
-                 max_num_local_iter):
-    """Assemble internal load vector for each N-R iteration
-
-    Parameters
-    ----------
-    model : Model object
-    num_dof : number of degree's of freedom
-    du : displacement increment
-    eps_e_n : dict {(eid, gp_id): ndarray shape (3)}
-        Stores the elastic strain at previous step for each element and each
-        gauss point. This value is updated every time this function is called
-    eps_bar_p_n : dict {(eid, gp_id): float}
-        Stores the accumulated plastic strain at previous step for each element
-        and each gauss point (gp). This value is updated every time this
-        function is called
-    dgamma_n : dict {(eid, gp_id): float}
+    [ Kff Kfr ] [ delta_u_f ]     [ residual_f ]
+    [ Krf Krr ] [ delta_u_r ] = - [ residual_r ]
 
     Returns
     -------
-    f_int : ndarray shape (num_dof)
-    K_T : ndarray shape (num_dof, num_dof)
-    ep_flag : str
-    int_var : dict
-        dictionary of interal state variables for each gauss point for
-        each element
+    delta_u, r
+        newton correction and residual orderer as [free, restrained] dof
 
     Note
     ----
-    Reference Eq. 4.65 (1) Neto 2008
-
-    Find the stress for a fiven displacement u, then multiply the stress for
-    the strain-displacement matrix trasnpose and integrate it over domain.
-
-    Procedure:
-    1. Loop over elements
-    2. Loop over each gauss point
-        2.1 Compute strain increment from displacement increment
-        2.2 Compute elastic trial strain
-        2.3 Update state variables (stress, elastic strain, plastic multiplier,
-                                    accumulated plastic strain)
-        2.4 Compute internal element force vector
-        2.5 Compute element tangent stiffness matrix
-    3. Assemble global internal force vector and tangent stiffness matrix
+    Considering homogeneous Dirichlet boundary conditions, zero displacement
+    on the restrained dofs
 
     """
-    # initialize global vector and matrices
-    f_int = np.zeros(num_dof)
-    K_T = np.zeros((num_dof, num_dof))
+    # incidences of free and restrained dofs
+    f, r = model.id_f, model.id_r
+    ff = np.ix_(f, f)
+    rf = np.ix_(r, f)
 
-    # dictionary with local variables
-    # new every local N-R iteration
-    # use to save converged value
-    int_var = {'eps_e': {}, 'eps_bar_p': {}, 'sig_ele': {},
-               'dgamma': {}, 'sig': {}}
+    # updtade vector with all dofs, the restrained dofs correction is zero
+    delta_u = np.zeros(model.num_dof)
+    # solve for free dofs
+    delta_u[f] = np.linalg.solve(K_T[ff], - residual[f])
 
-    # Loop over elements
-    for eid, [etype, *edata] in model.elements.items():
-        # create element object
-        element = constructor(eid, etype, model)
-        # recover element nodal displacement increment,  shape (8,)
-        dof = np.array(element.dof) - 1  # numpy starts at 0
-        du_ele = du[dof]
+    # update residual vector with the restrained part
+    residual[model.id_r] = - K_T[rf] @ delta_u[f]
 
-        # material properties
-        E, nu = element.E, element.nu
-        # Hardening modulus and yield stress
-        # TODO: include this as a parameter of the material later DONE
-        try:
-            H = model.material.H[element.physical_surf]
-            sig_y0 = model.material.sig_y0[element.physical_surf]
-        except (AttributeError, KeyError) as err:
-            raise Exception('Missing material property H and sig_y0 in'
-                            'the material object')
-
-        # initialize array for element internal force vector
-        f_int_e = np.zeros(8)
-        # initialize array for element consistent tangent matrix
-        k_T_e = np.zeros((8, 8))
-
-        # initialize stress array to compute average
-        int_var['sig_ele'][eid] = np.zeros(3)
-
-        # loop over quadrature points
-        for gp_id, [w, gp] in enumerate(zip(element.gauss.weights,
-                                            element.gauss.points)):
-            # build element strain-displacement matrix shape (3, 8)
-            N, dN_ei = element.shape_function(xez=gp)
-            dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
-            B = element.gradient_operator(dN_xi)
-
-            # compute strain increment from
-            # current displacement increment, shape (3, )
-            deps = B @ du_ele
-
-            # elastic trial strain
-            # use the previous value stored for this element and this gp
-            eps_e_trial = eps_e_n[(eid, gp_id)] + deps
-
-            # trial accumulated plastic strain
-            # this is only updated when converged
-            eps_bar_p_trial = eps_bar_p_n[(eid, gp_id)]
-
-            # update internal variables for this gauss point
-            sig, eps_e, eps_bar_p, dgamma, ep_flag = state_update_mises(
-                E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial,
-                max_num_local_iter, model.material.case)
-
-            # print(f'gp {gp_id} eps_bar_p {eps_bar_p:.1e} dgamma {dgamma:.1e}'
-            #       f'plastic? {ep_flag}')
-            # TODO Only update when converged! outside this function! DONE
-            # save solution of constitutive equation -> internal variables
-            # int_var is a dictionary with the internal variables
-            # each interal variable is a dictionary with a tuple key
-            # the tuple (eid, gp_id) for each element and each gauss point
-            int_var['eps_e'][(eid, gp_id)] = eps_e
-            int_var['eps_bar_p'][(eid, gp_id)] = eps_bar_p
-            int_var['dgamma'][(eid, gp_id)] = dgamma
-            int_var['sig'][(eid, gp_id)] = sig
-
-            # average of gauss point stress for element stress
-            int_var['sig_ele'][eid] += sig / len(element.gauss.weights)
-
-            # compute element internal force (gaussian quadrature)
-            f_int_e += B.T @ sig * (dJ * w * element.thickness)
-
-            # TODO: material properties from element, E, nu, H DONE
-            # TODO: ep_flag comes from the state update? DONE
-            # use dgama from previous global iteration
-            D = consistent_tangent_mises(
-                dgamma_n[(eid, gp_id)], sig, E, nu, H, ep_flag,
-                model.material.case)
-
-            # element consistent tanget matrix (gaussian quadrature)
-            k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
-
-        # Build global matrices outside the quadrature loop
-        # += because elements can share same dof
-        f_int[element.id_v] += f_int_e
-        K_T[element.id_m] += k_T_e
-
-    return f_int, K_T, int_var
-
-
-def build_tangent_stiffness(model, num_dof, sig, dgamma_n, ep_flag):
-    """Build consistent tangent matrix
-
-    Parameters
-    ----------
-    sig : dict {(eid, gp_id): ndarray shape (3,)}
-        Stress from previous iteration
-
-    """
-    # initialize global vector and matrices
-    K_T = np.zeros((num_dof, num_dof))
-    # Loop over elements
-    for eid, [etype, *edata] in model.elements.items():
-        # create element object
-        element = constructor(eid, etype, model)
-
-        # material properties
-        E, nu = element.E, element.nu
-        # Hardening modulus
-        try:
-            H = model.material.H[element.physical_surf]
-        except (AttributeError, KeyError) as err:
-            raise Exception('Missing material property H and sig_y0 in'
-                            'the material object')
-        # initialize array for element consistent tangent matrix
-        k_T_e = np.zeros((8, 8))
-
-        # loop over quadrature points
-        for gp_id, [w, gp] in enumerate(zip(element.gauss.weights,
-                                            element.gauss.points)):
-            # build element strain-displacement matrix shape (3, 8)
-            N, dN_ei = element.shape_function(xez=gp)
-            dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
-            B = element.gradient_operator(dN_xi)
-
-            sig_ele = sig[(eid, gp_id)]
-
-            # use dgama from previous global iteration
-            D = consistent_tangent_mises(
-                dgamma_n[(eid, gp_id)],
-                sig_ele, E, nu, H, ep_flag,
-                model.material.case)
-
-            # element consistent tanget matrix (gaussian quadrature)
-            k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
-
-        # Build global matrices outside the quadrature loop
-        # += because elements can share same dof
-        K_T[element.id_m] += k_T_e
-
-    return K_T
+    return delta_u, residual
 
 
 def external_load_vector(model):
