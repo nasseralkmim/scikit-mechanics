@@ -488,6 +488,39 @@ def get_free_restrained_dof(model):
 
     free_dof = list(set(all_dof) - set(restrained_dof))
     return np.array(free_dof) - 1, np.array(restrained_dof) - 1
+def save_output(model, u, int_var, incr_id, start, lmbda):
+    """Save output to .msh file"""
+    # TODO: save internal variables to a file DONE
+    displ_dic = dof2node(u, model)
+    write_field(displ_dic, model.mesh.name,
+                'Displacement', 2, lmbda, incr_id, start)
+
+    # smoothed (average) extrapolated stresses to nodes
+    sig_dic = stress_recovery_smoothed(model, u)
+    sig_x_dic = {nid: sx for nid, [sx, _, _] in sig_dic.items()}
+    sig_y_dic = {nid: sy for nid, [_, sy, _] in sig_dic.items()}
+    sig_xy_dic = {nid: txy for nid, [_, _, txy] in sig_dic.items()}
+    write_field(sig_x_dic, model.mesh.name,
+                'Sigma x', 2, lmbda, incr_id, start)
+    write_field(sig_y_dic, model.mesh.name,
+                'Sigma y', 2, lmbda, incr_id, start)
+    write_field(sig_xy_dic, model.mesh.name,
+                'Sigma xy', 2, lmbda, incr_id, start)
+
+    # element average of cummulative plastic strain
+    eps_bar_p_avg = {eid: int_var['eps_bar_p'][(eid, gp)]
+                     for eid in model.elements.keys()
+                     for gp in range(4)}
+    write_field(eps_bar_p_avg, model.mesh.name,
+                'Cummulative plastic strain element average', 1,
+                lmbda, incr_id, start, datatype='Element')
+
+    # sig_ele {eid: [sig_x, sig_y, sig_xy]}
+    sig_ele = int_var['sig_ele']
+    sig_x = {eid: sig_ele[eid][0] for eid in model.elements.keys()}
+    write_field(sig_x, model.mesh.name, 'Sigma x element average', 1,
+                lmbda, incr_id, start, datatype='Element')
+    return None
 
 
 if __name__ == '__main__':
