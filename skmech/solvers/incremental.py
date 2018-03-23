@@ -474,20 +474,21 @@ def external_load_vector(model):
 def get_free_restrained_dof(model):
     """Get the free dof list
 
-    Ignore supports for now
 
-    """
-    restrained_dof = []
-    for d_location, d_vector in model.imposed_displ.items():
-        physical_element = model.get_physical_element(d_location)
-        for eid, [etype, *edata] in physical_element.items():
-            restrained_dof.extend(model.nodes_dof[eid])
-    all_dof = []
-    for nid, dof in model.nodes_dof.items():
-        all_dof.extend(dof)
+def update_int_var(int_var):
+    """Update internal variables with iteration values"""
+    # TODO: update interal variables converged DONE
+    # update elastic strain for this element for this gp
+    eps_e_n = int_var['eps_e']
+    # update cummulative plastic strain
+    eps_bar_p_n = int_var['eps_bar_p']
+    # update incremental plastic multiplier
+    dgamma_n = int_var['dgamma']
+    # update stress
+    sig_n = int_var['sig']
+    return eps_e_n, eps_bar_p_n, dgamma_n, sig_n
 
-    free_dof = list(set(all_dof) - set(restrained_dof))
-    return np.array(free_dof) - 1, np.array(restrained_dof) - 1
+
 def save_output(model, u, int_var, incr_id, start, lmbda):
     """Save output to .msh file"""
     # TODO: save internal variables to a file DONE
