@@ -471,8 +471,28 @@ def external_load_vector(model):
     return Pt
 
 
-def get_free_restrained_dof(model):
-    """Get the free dof list
+def initial_values(model):
+    """Initialize internal variables dic"""
+    # initial elastic strain for each element gauss point
+    # TODO: fixed for 4 gauss point for now
+    # TODO: maybe put that in the element class
+    # TODO: Question about initial elastic strain
+    # initialize cummulatice plastic strain for each element gauss point
+    # num_quad_points is a dictionary with {eid, num_quad_points}
+    # num_quad_poins for each dimension, multiply by 2 for plane problems
+    eps_e_n = {(eid, gp): np.zeros(3) for eid in model.elements.keys()
+               for gp in range(model.num_quad_points[eid] * 2)}
+    eps_bar_p_n = {(eid, gp): 0 for eid in model.elements.keys()
+                   for gp in range(model.num_quad_points[eid] * 2)}
+    # initialize dict to store incremental plastic multiplier
+    # used to compute the consistent tangent matrix
+    dgamma_n = {(eid, gp): 0 for eid in model.elements.keys()
+                for gp in range(model.num_quad_points[eid] * 2)}
+    # initialize displacement to compute internal force vector
+    # at firt iteration of each step
+    sig_n = {(eid, gp): np.zeros(3) for eid in model.elements.keys()
+             for gp in range(model.num_quad_points[eid] * 2)}
+    return eps_e_n, eps_bar_p_n, dgamma_n, sig_n
 
 
 def update_int_var(int_var):
