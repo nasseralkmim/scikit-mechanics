@@ -19,13 +19,31 @@ def write_output(time, field, file_name,
         if exe_time > os.path.getmtime(f'{file_name}.out'):
             # True if file was created before this execution
             # then overwrite previous file
-            with open(f'{file_name}.out', 'w') as out:
-                out.write(f"{time} {field} \r\n")
+            with open(f'{file_name}.out', 'w+') as out:
+                out.write(f"{time}")
+                if type(field) is np.ndarray:
+                    for fld in field:
+                        out.write(f" {fld}")
+                    out.write("\r\n")
+                else:
+                    out.write(f" {field} \r\n")
         else:
             # file was created during this execution, append
-            with open(f'{file_name}.out', 'a') as out:
-                out.write(f"{time} {field} \r\n")
+            with open(f'{file_name}.out', 'a+') as out:
+                out.write(f"{time}")
+                if type(field) is np.ndarray:
+                    for fld in field:
+                        out.write(f" {fld}")
+                    out.write("\r\n")
+                else:
+                    out.write(f" {field} \r\n")
     else:
         # file does not exist, create
-        with open(f'{file_name}.out', 'w') as out:
-            out.write(f"{time} {field} \r\n")
+        with open(f'{file_name}.out', 'w+') as out:
+            out.write(f"{time}")
+            if type(field) is np.ndarray:
+                for fld in field:
+                    out.write(f" {fld}")
+                out.write("\r\n")
+            else:
+                out.write(f" {field} \r\n")
