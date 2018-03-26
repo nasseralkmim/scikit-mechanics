@@ -314,24 +314,27 @@ def update_int_var(int_var):
     return eps_e_n, eps_bar_p_n, dgamma_n, sig_n
 
 
-def save_output(model, u, int_var, incr_id, start, lmbda):
+def save_output(model, u, int_var, increment, start, lmbda,
+                element_out, node_out):
     """Save output to .msh file"""
     # TODO: save internal variables to a file DONE
     displ_dic = dof2node(u, model)
     write_field(displ_dic, model.mesh.name,
-                'Displacement', 2, lmbda, incr_id, start)
-
+                'Displacement', 2, lmbda, increment, start)
+    if node_out is not None:
+        write_output(lmbda, displ_dic[node_out],
+                     f'displ_node{node_out}', start)
     # smoothed (average) extrapolated stresses to nodes
     sig_dic = stress_recovery_smoothed(model, u)
     sig_x_dic = {nid: sx for nid, [sx, _, _] in sig_dic.items()}
     sig_y_dic = {nid: sy for nid, [_, sy, _] in sig_dic.items()}
     sig_xy_dic = {nid: txy for nid, [_, _, txy] in sig_dic.items()}
     write_field(sig_x_dic, model.mesh.name,
-                'Sigma x', 2, lmbda, incr_id, start)
+                'Sigma x', 1, lmbda, increment, start)
     write_field(sig_y_dic, model.mesh.name,
-                'Sigma y', 2, lmbda, incr_id, start)
+                'Sigma y', 1, lmbda, increment, start)
     write_field(sig_xy_dic, model.mesh.name,
-                'Sigma xy', 2, lmbda, incr_id, start)
+                'Sigma xy', 1, lmbda, increment, start)
 
     # element average of cummulative plastic strain
     eps_bar_p_avg = {eid: int_var['eps_bar_p'][(eid, gp)]
@@ -339,13 +342,34 @@ def save_output(model, u, int_var, incr_id, start, lmbda):
                      for gp in range(4)}
     write_field(eps_bar_p_avg, model.mesh.name,
                 'Cummulative plastic strain element average', 1,
-                lmbda, incr_id, start, datatype='Element')
+                lmbda, increment, start, datatype='Element')
+    if element_out is not None:
+        write_output(lmbda, int_var['eps_bar_p'][(element_out, 0)],
+                     f'peeq_gp1_ele{element_out}', start)
+        write_output(lmbda, int_var['eps_bar_p'][(element_out, 1)],
+                     f'peeq_gp2_ele{element_out}', start)
+        write_output(lmbda, int_var['eps_bar_p'][(element_out, 2)],
+                     f'peeq_gp3_ele{element_out}', start)
+        write_output(lmbda, int_var['eps_bar_p'][(element_out, 3)],
+                     f'peeq_gp4_ele{element_out}', start)
 
-    # sig_ele {eid: [sig_x, sig_y, sig_xy]}
-    sig_ele = int_var['sig_ele']
-    sig_x = {eid: sig_ele[eid][0] for eid in model.elements.keys()}
-    write_field(sig_x, model.mesh.name, 'Sigma x element average', 1,
-                lmbda, incr_id, start, datatype='Element')
+        write_output(lmbda, int_var['sig'][(element_out, 0)],
+                     f'sig_gp1_ele{element_out}', start)
+        write_output(lmbda, int_var['sig'][(element_out, 1)],
+                     f'sig_gp2_ele{element_out}', start)
+        write_output(lmbda, int_var['sig'][(element_out, 2)],
+                     f'sig_gp3_ele{element_out}', start)
+        write_output(lmbda, int_var['sig'][(element_out, 3)],
+                     f'sig_gp4_ele{element_out}', start)
+
+        write_output(lmbda, int_var['eps'][(element_out, 0)],
+                     f'eps_gp1_ele{element_out}', start)
+        write_output(lmbda, int_var['eps'][(element_out, 1)],
+                     f'eps_gp2_ele{element_out}', start)
+        write_output(lmbda, int_var['eps'][(element_out, 2)],
+                     f'eps_gp3_ele{element_out}', start)
+        write_output(lmbda, int_var['eps'][(element_out, 3)],
+                     f'eps_gp4_ele{element_out}', start)
     return None
 
 
