@@ -36,6 +36,8 @@ def solver(model, t=1):
     Km, Pm = dirichlet(K, P, model)
     U = np.linalg.solve(Km, Pm)
     # add current dof displacement to model
+    # not optimal but ok, because it requires me to run solver before
+    # stress recovery
     model.set_dof_displacement(U)
     u = dof2node(U, model)
     end = time.time()
