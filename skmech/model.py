@@ -27,7 +27,8 @@ class Model(object):
     def __init__(self, mesh, material=None, traction=None,
                  displacement_bc=None, body_forces=None, zerolevelset=None,
                  imposed_displ=None,
-                 num_quad_points=2, thickness=1., etypes=[3]):
+                 num_quad_points=2, thickness=1., etypes=[3],
+                 microscale=False, homogenized_c=None):
         self.mesh = mesh
         self.material = material
         self.traction = traction
@@ -37,6 +38,7 @@ class Model(object):
         self.thickness = thickness
 
         # solution after calling the solver
+        # TODO: not sure if this is a good idea
         self.dof_displacement = 0
 
         self.etypes = etypes
@@ -54,8 +56,8 @@ class Model(object):
         # nodes.coord, nodes.num_dof, nodes.dof, nodes.num_dof_pernode,
         self.nodes_dof = self._generate_dof()
 
-        # connectivity matrices for partinioning the system of equations
-        self.Lf, self.Lr = self.get_connectivity_matrices()
+        # array with free and restrained dof
+        self.id_f, self.id_r = self.get_free_restrained_dof()
 
         if zerolevelset is None:
             self.xfem = None
@@ -64,10 +66,19 @@ class Model(object):
                              zerolevelset, material)
             self.num_dof = self.xfem.num_dof            # update num dof
 
+        # Temporary prototype
+        self.microscale = microscale
+        self.homogenized_c = homogenized_c
 
-    def get_connectivity_matrices(self):
-        """Compute connectivity matrix for free and restrained dofs"""
-        Lf, Lr = [], []
+    def get_free_restrained_dof(self):
+        """Create array with free and restrained dofs
+
+        Note
+        ----
+        Used the items in the displacement_bc dictionary
+
+        """
+        id_r = []
         if self.displacement_bc is not None:
             for d_loc, d_value in self.displacement_bc.items():
                 physical_element = self.get_physical_element(d_loc)
@@ -77,41 +88,70 @@ class Model(object):
                         node = edata[-1]  # last entry
                         dof = np.array(self.nodes_dof[node]) - 1
                         if d_value[0] is not None:
-                            lr = np.zeros(self.num_dof)
-                            lr[dof[0]] = 1
-                            Lr.append(lr)
+                            id_r.append(dof[0])
                         if d_value[1] is not None:
-                            lr = np.zeros(self.num_dof)
-                            lr[dof[1]] = 1
-                            Lr.append(lr)
+                            id_r.append(dof[1])
                     # physical lines
                     if etype == 1:
                         node_1, node_2 = edata[-2], edata[-1]
                         dof_n1 = np.array(self.nodes_dof[node_1]) - 1
                         dof_n2 = np.array(self.nodes_dof[node_2]) - 1
                         if d_value[0] is not None:
-                            lr_n1 = np.zeros(self.num_dof)
-                            lr_n1[dof_n1[0]] = 1
-                            Lr.append(lr_n1)
-                            lr_n2 = np.zeros(self.num_dof)
-                            lr_n2[dof_n2[0]] = 1
-                            Lr.append(lr_n2)
+                            id_r.append(dof_n1[0])
+                            id_r.append(dof_n2[0])
                         if d_value[1] is not None:
-                            lr_n1 = np.zeros(self.num_dof)
-                            lr_n1[dof_n1[1]] = 1
-                            Lr.append(lr_n1)
-                            lr_n2 = np.zeros(self.num_dof)
-                            lr_n2[dof_n2[1]] = 1
-                            Lr.append(lr_n2)
+                            id_r.append(dof_n1[1])
+                            id_r.append(dof_n2[1])
 
-        return np.array(Lf), np.array(Lr)
+        id_f = [dof[i] - 1 for i in [0, 1] for dof in self.nodes_dof.values()
+                if dof[i] - 1 not in id_r]
+        return id_f, id_r
+
+    def update_free_restrained_dof(self, increment):
+        """Update the free and restrained dof arrays
+
+        Note
+        ----
+        Uses the items in imposed_displ[increment] dictionary for an specific
+        time increment in the incremental solver
+
+        """
+        id_r = []
+        if self.imposed_displ is not None:
+            for d_loc, d_value in self.imposed_displ[increment].items():
+                physical_element = self.get_physical_element(d_loc)
+                for eid, [etype, *edata] in physical_element.items():
+                    # physical points
+                    if etype == 15:
+                        node = edata[-1]  # last entry
+                        dof = np.array(self.nodes_dof[node]) - 1
+                        if d_value[0] is not None:
+                            id_r.append(dof[0])
+                        if d_value[1] is not None:
+                            id_r.append(dof[1])
+                    # physical lines
+                    if etype == 1:
+                        node_1, node_2 = edata[-2], edata[-1]
+                        dof_n1 = np.array(self.nodes_dof[node_1]) - 1
+                        dof_n2 = np.array(self.nodes_dof[node_2]) - 1
+                        if d_value[0] is not None:
+                            id_r.append(dof_n1[0])
+                            id_r.append(dof_n2[0])
+                        if d_value[1] is not None:
+                            id_r.append(dof_n1[1])
+                            id_r.append(dof_n2[1])
+        id_r = self.id_r + id_r
+
+        id_f = [dof[i] - 1 for i in [0, 1] for dof in self.nodes_dof.values()
+                if dof[i] - 1 not in id_r]
+        return id_f, id_r
 
     def set_dof_displacement(self, displacement):
         """Set the dof displacemnt into model attribute"""
         self.dof_displacement = displacement
 
     def get_physical_element(self, physical_element):
-        """Get physical line element
+        """Get physical elements
 
         Parameters
         ----------
