@@ -33,14 +33,14 @@ class ZeroLevelSet(object):
         discontinuity interface.
 
     """
-    def __init__(self, region, x_domain, y_domain, num_div=50,
+    def __init__(self, region, x_domain, y_domain, num_div=[50, 50],
                  matrix=1, reinforcement=-1, material=None):
         self.grid_x, self.grid_y = np.meshgrid(np.linspace(x_domain[0],
                                                            x_domain[1],
-                                                           num_div),
+                                                           num_div[0]),
                                                np.linspace(y_domain[0],
                                                            y_domain[1],
-                                                           num_div))
+                                                           num_div[1]))
         # flip the grid so it agrees with cartesian coordinates
         self.grid_x = np.flipud(self.grid_x)
         self.grid_y = np.flipud(self.grid_y)
