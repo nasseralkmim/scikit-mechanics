@@ -1,0 +1,71 @@
+* scikit-mechanics
+
+This project is a collection of modules for solving mechanics models.
+So far, its capable of solving the plane problem using the Finite Element Method with a simple quadrilateral element with linear shape functions.
+
+* How to use
+
+scikit-mechanics was designed so its really simple to perform a mechanical analysis.
+The first step is to set up a mesh file, I recommed using [[http://gmsh.info/][gmsh]] for that.
+The mesh file (=.msh=) follows the formatting:
+
+#+BEGIN_EXAMPLE
+$MeshFormat
+2.2 0 8
+$EndMeshFormat
+$Nodes
+4
+1 0 0 0
+2 0.001 0 0
+3 0.001 0.001 0
+4 0 0.001 0
+$EndNodes
+$Elements
+5
+1 1 2 2 1 1 2
+2 1 2 3 2 2 3
+3 1 2 4 3 3 4
+4 1 2 1 4 4 1
+5 3 2 3 10 1 2 3 4
+$EndElements
+#+END_EXAMPLE
+
+which represents a single element with 4 nodes, and 5 elements.
+The elements with type 1 (second number) indicates lines with two nodes, are specified as physical elements for applying boundary conditions.
+The element type 3 is the quadrilateral element.
+
+This file is then used to perform a static analysis:
+
+#+BEGIN_SRC python
+import skmech
+
+E, nu, H, sig_y = 250e9, 0.25, 50e9, 2.5e6  # Pa, -, Pa, Pa
+msh = skmech.Mesh('one.msh')
+displbc = {1: (0, None), 2: (None, 0)}
+mat = skmech.Material(E={3: E},
+                      nu={3: nu},
+                      H={3: H},
+                      sig_y0={3: sig_y},
+                      case='strain')
+trac = {3: (5e6, 0)}        # boundary condition on physical element 3
+model = skmech.Model(
+    msh, material=mat, displacement_bc=displbc,
+    thickness=1e-3, traction=trac)
+
+u = skmech.statics.solver(model)
+
+sig = skmech.postprocess.stress_recovery_smoothed(model)
+sig_x = {nid: sig[nid][0] for nid in model.nodes.keys()} # x-component
+# save to post processing file
+skmech.gmshio.write_field(u, 'one', 'Displacement', ndim=2)
+skmech.gmshio.write_field(sig_x, 'one', 'Sigma x', ndim=1)
+#+END_SRC
+
+#+RESULTS:
+: Starting statics solver at 0.000h Solution completed in 0.002s!
+
+which can be visualized in gmsh,
+
+#+ATTR_HTML: :width 350
+#+ATTR_ORG: :width 350
+[[https://user-images.githubusercontent.com/9167399/38176843-c96d8688-35cc-11e8-9ab7-6745b89d8a58.png]]

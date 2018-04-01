@@ -1,5 +1,0 @@
-==============
-scikit-mechanics
-==============
-
-In construction
