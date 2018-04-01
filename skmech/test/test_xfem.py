@@ -28,15 +28,14 @@ msh.elements = {
     11: [3, 2, 11, 10, 5, 6, 7, 8],
 }
 func = lambda x, y: x - 0.3
-zls = skmech.xfem.ZeroLevelSet(func, [0, .6], [0, .2], num_div=100)
+zls = skmech.xfem.ZeroLevelSet(func, [0, .6], [0, .2], num_div=[100, 100])
 model = skmech.Model(msh, zerolevelset=zls)
-
 
 
 def test_xfem_phi():
     """test the value of the signed distance function"""
     func = lambda x, y: x - 0.3
-    zls = skmech.xfem.ZeroLevelSet(func, [0, .6], [0, .2], num_div=100)
+    zls = skmech.xfem.ZeroLevelSet(func, [0, .6], [0, .2], num_div=[100, 100])
     xfem = skmech.xfem.Xfem(model.nodes, model.elements, zls, None)
     assert pytest.approx(list(xfem.zls[0].phi), 3) == [
         -0.5, -0.16666667, -0.16666667, -0.5, 0.16666667, 0.5, 0.5, 0.16666667
@@ -46,6 +45,6 @@ def test_xfem_phi():
 def test_xfem_enr_elements():
     """test the enriched elements were collected"""
     func = lambda x, y: x - 0.1
-    zls = skmech.xfem.ZeroLevelSet(func, [0, .6], [0, .2], num_div=100)
+    zls = skmech.xfem.ZeroLevelSet(func, [0, .6], [0, .2], num_div=[100, 100])
     model = skmech.Model(msh, zerolevelset=zls)
     assert model.xfem.enr_elements == [9, 10]

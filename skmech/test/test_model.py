@@ -216,8 +216,10 @@ def test_xyz():
             11: [3, 2, 11, 10, 9, 6, 3, 7],
             12: [3, 2, 11, 10, 8, 9, 7, 4]
         }
-        model = skmech.Model(msh)
+        model = skmech.Model(msh, displacement_bc={12: (0, 0),
+                                                   13: (None, 0)})
         xyz = np.array(list(msh.nodes[n][:2] for n in msh.nodes.keys()))
+        print(model.id_r, model.id_f)
 
 
 test_xyz()
