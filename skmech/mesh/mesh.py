@@ -8,6 +8,8 @@ class Mesh(object):
 
     Parameters
     ----------
+    mesh_file : str
+        mesh file with extension .msh
     nodes : dict
         Nodes coordinate with the format {node_id : array(x, y, z)}
     element : dict
