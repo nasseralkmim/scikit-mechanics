@@ -28,23 +28,21 @@ def solver(model, time_step=.1, min_time_step=1e-3,
     ----
     Reference Box 4.2 (Neto 2008)
 
+    Note
+    ----
+    Xfem and incremental analysis not tested.
+    Using model.num_dof will change if using xfem.
+
     """
     start = time.time()
     print('Starting incremental solver')
 
-    # NN why would model not have num_dof???
-    try:
-        num_dof = model.num_dof
-    except AttributeError:
-        raise Exception('Model object does not have num_dof attribute')
-
     # initial displacement for t_0 (n=0)
-    u = np.zeros(num_dof)
+    u = np.zeros(model.num_dof)
 
     eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n = initial_values(model)
 
-    # external load vector
-    # Only traction for now
+    # external load vector, only traction for now
     f_ext_bar = external_load_vector(model)
 
     increment, lmbda = 0, 0
@@ -54,14 +52,15 @@ def solver(model, time_step=.1, min_time_step=1e-3,
         print(f'Load factor {lmbda:.4f} increment {increment}')
         print('--------------------------------------')
 
-        # break after all imposed displacement load steps
+        # break after all imposed displacement load steps (for displ control)
         if model.imposed_displ is not None:
             if increment >= len(model.imposed_displ):
                 break
 
         # initial displacement increment for each load step
-        Delta_u = np.zeros(num_dof)
+        Delta_u = np.zeros(model.num_dof)
         f_ext = lmbda * f_ext_bar
+
         # Step (2), (3)
         f_int, K_T, int_var = localization(model, Delta_u,
                                            eps_e_n,
@@ -71,22 +70,14 @@ def solver(model, time_step=.1, min_time_step=1e-3,
                                            max_num_local_iter)
         # Begin global Newton procedures
         for k in range(0, max_num_iter + 1):
-            # if more than 6 iterations, add half of the interval
-            if k >= max_num_iter:
-                lmbda = lmbda - time_step + time_step / 2
-                if time_step < min_time_step:
-                    time_step = min_time_step
-                else:
-                    time_step = time_step / 2
-                # break out of Newton loop
-                break
-
             # Step (4) Assemble global and solve for correction
             newton_correction, f_ext = solve_partitioned(
                 model, K_T, f_int, f_ext, increment, k)
+
             # Step (5) Update solutions
             Delta_u += newton_correction
             u += newton_correction
+
             # Step (6) (7) (8)
             # build internal load vector and solve local constitutive equation
             f_int, K_T, int_var = localization(model, Delta_u,

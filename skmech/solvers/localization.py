@@ -8,6 +8,7 @@ import numpy as np
 from ..constructor import constructor
 from ..plasticity.stateupdatemises import state_update_mises as suvm
 from ..plasticity.tangentmises import consistent_tangent_mises
+from ..multiscale.microincremental import micro_incremental
 
 
 def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
@@ -19,19 +20,19 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
     model : Model object
     num_dof : number of degree's of freedom
     Delta_u : displacement increment
-    eps_e_n : dict {(eid, gp_id): ndarray shape (4)}
+    eps_e_n : dict {(eid, gpid): ndarray shape (4)}
         Stores the elastic strain at previous step for each element and each
         gauss point. This value is updated every time this function is called.
         Note that it has 4 components, the elastic strain component, eps_e_33,
         is not zero
-    eps_p_n : dict {(eid, gp_id): ndarray shape (4)}
+    eps_p_n : dict {(eid, gpid): ndarray shape (4)}
         Note that it has 4 components, the plastic strain component, eps_e_33,
         is not zero, even though the total strain eps_33 = 0 for plane strain.
-    eps_bar_p_n : dict {(eid, gp_id): float}
+    eps_bar_p_n : dict {(eid, gpid): float}
         Stores the accumulated plastic strain at previous step for each element
         and each gauss point (gp). This value is updated every time this
         function is called
-    dgamma_n : dict {(eid, gp_id): float}
+    dgamma_n : dict {(eid, gpid): float}
 
     Returns
     -------
@@ -59,6 +60,11 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
         2.4 Compute internal element force vector
         2.5 Compute element tangent stiffness matrix
     3. Assemble global internal force vector and tangent stiffness matrix
+
+    Note
+    ----
+    If micromodel option is True in the incremental procedure then substitute
+    the state update (suvm) module with an microscale solver.
 
     """
     num_dof = model.num_dof
@@ -96,8 +102,8 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
         k_T_e = np.zeros((8, 8))
 
         # loop over quadrature points
-        for gp_id, [w, gp] in enumerate(zip(element.gauss.weights,
-                                            element.gauss.points)):
+        for gpid, [w, gp] in enumerate(zip(element.gauss.weights,
+                                           element.gauss.points)):
             # build element strain-displacement matrix shape (3, 8)
             N, dN_ei = element.shape_function(xez=gp)
             dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
@@ -110,21 +116,19 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
 
             # elastic trial strain
             # use the previous value stored for this element and this gp
-            eps_e_trial = eps_e_n[(eid, gp_id)] + Delta_eps
+            eps_e_trial = eps_e_n[(eid, gpid)] + Delta_eps
 
             # trial accumulated plastic strain
             # this is only updated when converged
-            eps_bar_p_trial = eps_bar_p_n[(eid, gp_id)]
+            eps_bar_p_trial = eps_bar_p_n[(eid, gpid)]
 
             # plastic strain trial is from previous load step
-            eps_p_trial = eps_p_n[(eid, gp_id)]
+            eps_p_trial = eps_p_n[(eid, gpid)]
 
             # update internal variables for this gauss point
-            sig, eps_e, eps_p, eps_bar_p, dgamma, q, ep_flag = suvm(
+            sig, int_var, ep_flag = suvm(
                 E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial, eps_p_trial,
-                max_num_local_iter, model.material.case)
-            int_var = storage_int_var(int_var, eid, gp_id, eps_e, eps_p, sig,
-                                      eps_bar_p, q, dgamma, element)
+                max_num_local_iter, model.material.case, int_var, eid, gpid)
 
             # compute element internal force (gaussian quadrature)
             # sig[:3] ignore the 33 component here
@@ -134,7 +138,7 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
             # TODO: ep_flag comes from the state update? DONE
             # use dgama from previous global iteration
             D = consistent_tangent_mises(
-                dgamma_n[(eid, gp_id)], sig, E, nu, H, ep_flag,
+                dgamma_n[(eid, gpid)], sig, E, nu, H, ep_flag,
                 model.material.case)
             # print(D / 1e9, 'GPa')
             # element consistent tanget matrix (gaussian quadrature)
@@ -148,7 +152,7 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
     return f_int, K_T, int_var
 
 
-def storage_int_var(int_var, eid, gp_id, eps_e, eps_p, sig,
+def storage_int_var(int_var, eid, gpid, eps_e, eps_p, sig,
                     eps_bar_p, q, dgamma, element):
     """Storage internal variables
 
@@ -166,13 +170,13 @@ def storage_int_var(int_var, eid, gp_id, eps_e, eps_p, sig,
     # save solution of constitutive equation -> internal variables
     # int_var is a dictionary with the internal variables
     # each interal variable is a dictionary with a tuple key
-    # the tuple (eid, gp_id) for each element and each gauss point
-    int_var['eps_e'][(eid, gp_id)] = eps_e
-    int_var['eps_p'][(eid, gp_id)] = eps_p
-    int_var['eps'][(eid, gp_id)] = eps_e + eps_p
-    int_var['eps_bar_p'][(eid, gp_id)] = eps_bar_p
-    int_var['dgamma'][(eid, gp_id)] = dgamma
-    int_var['sig'][(eid, gp_id)] = sig
-    int_var['q'][(eid, gp_id)] = q
+    # the tuple (eid, gpid) for each element and each gauss point
+    int_var['eps_e'][(eid, gpid)] = eps_e
+    int_var['eps_p'][(eid, gpid)] = eps_p
+    int_var['eps'][(eid, gpid)] = eps_e + eps_p
+    int_var['eps_bar_p'][(eid, gpid)] = eps_bar_p
+    int_var['dgamma'][(eid, gpid)] = dgamma
+    int_var['sig'][(eid, gpid)] = sig
+    int_var['q'][(eid, gpid)] = q
 
     return int_var

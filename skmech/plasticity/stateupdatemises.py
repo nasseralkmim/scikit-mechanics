@@ -4,7 +4,8 @@ import numpy as np
 
 def state_update_mises(E, nu, H, sig_y0,
                        eps_e_trial, eps_bar_p_trial, eps_p_trial,
-                       max_num_local_iter, material_case):
+                       max_num_local_iter, material_case,
+                       int_var, eid, gpid):
     """State update procedure considering von Mises yield criterion
 
     Update variables by solving the nonlinear constitutive equations using
@@ -36,7 +37,7 @@ def state_update_mises(E, nu, H, sig_y0,
 
     """
     # initializa plastic multiplier variation
-    dgama = 0
+    dgamma = 0
 
     # material properties
     G = E / (2 * (1 + nu))      # shear modulus
@@ -80,7 +81,7 @@ def state_update_mises(E, nu, H, sig_y0,
         # TODO: later add internal variables
         local_newton = False
         if local_newton is True:
-            sig, eps_e, eps_p, eps_bar_p, dgama, q = local_constitutive_newton(
+            sig, eps_e, eps_p, eps_bar_p, dgamma, q = local_constit_newton(
                 max_num_local_iter,
                 Phi_trial, eps_bar_p, q_trial,
                 p, eps_d_trial, eps_v_trial, eps_p,
@@ -88,7 +89,7 @@ def state_update_mises(E, nu, H, sig_y0,
         else:
             # first considering linear hardening function
             # TODO: use this to test the NR implementation above
-            sig, eps_e, eps_p, eps_bar_p, dgama, q = local_const_lin_hard(
+            sig, eps_e, eps_p, eps_bar_p, dgamma, q = local_const_lin_hard(
                 Phi_trial, G, H, eps_d_trial, q_trial, p, eps_v_trial,
                 eps_bar_p, eps_p)
         # elastoplastic flag, if True plastic step
@@ -96,30 +97,52 @@ def state_update_mises(E, nu, H, sig_y0,
 
     else:
         # elastic step
-        # # (Eq. 4.51 Neto 2008)
-        # local Is fourth order symmetric identity tensor in equivalent matrix
-        # fourth_sym_I = np.array([
-        #     [1, 0, 0],
-        #     [0, 1, 0],
-        #     [0, 0, .5]])
-        # # local second order identity tensor in vector form
-        # second_i = np.array([1, 1, 0])
-        # if material_case == 'strain':
-        #     A = 1
-        # elif material_case == 'stress':
-        #     A = 2 * G / (K + 4 / 3 * G)
-        # # material elasticity matrix
-        # De = 2 * G * fourth_sym_I + A * (K - 2 / 3 * G) * np.outer(second_i,
-        #                                                            second_i)
         eps_e = eps_e_trial
         eps_p = eps_p_trial     # don't change plastic strain
         sig = 2 * G * eps_d_trial + p * np.array([1, 1, 0, 1])
         q = q_trial
-        # Note: eps_bar_p and dgama don't change in the elastic step
+        # Note: eps_bar_p and dgamma don't change in the elastic step
         # elastoplastic flag, if False elastic step
         ep_flag = False
 
-    return sig, eps_e, eps_p, eps_bar_p, dgama, q, ep_flag
+    int_var_updt = storage_int_var(int_var, eid, gpid, eps_e, eps_p, sig,
+                                   eps_bar_p, q, dgamma)
+
+    return sig, int_var_updt, ep_flag
+
+
+def storage_int_var(int_var, eid, gpid, eps_e, eps_p, sig,
+                    eps_bar_p, q, dgamma):
+    """Storage internal variables
+
+    Parameters
+    ----------
+
+    Return
+    ------
+    int_var : dict
+        dictionary of interal state variables for each gauss point for
+        each element
+
+    """
+    # TODO Only update when converged! outside this function! DONE
+    # save solution of constitutive equation -> internal variables
+    # int_var is a dictionary with the internal variables
+    # each interal variable is a dictionary with a tuple key
+    # the tuple (eid, gpid) for each element and each gauss point
+
+    # first copy the int_var dict, so the internal variables is changed
+    # only when the solution converged
+    int_var_updt = int_var.copy()
+    int_var_updt['eps_e'][(eid, gpid)] = eps_e
+    int_var_updt['eps_p'][(eid, gpid)] = eps_p
+    int_var_updt['eps'][(eid, gpid)] = eps_e + eps_p
+    int_var_updt['eps_bar_p'][(eid, gpid)] = eps_bar_p
+    int_var_updt['dgamma'][(eid, gpid)] = dgamma
+    int_var_updt['sig'][(eid, gpid)] = sig
+    int_var_updt['q'][(eid, gpid)] = q
+
+    return int_var_updt
 
 
 def local_const_lin_hard(Phi_trial, G, H, eps_d_trial, q_trial,
@@ -137,7 +160,7 @@ def local_const_lin_hard(Phi_trial, G, H, eps_d_trial, q_trial,
         Deviatoric trial strain
     eps_bar_p : float
         Cummulative plastic strain
-    dgama : float
+    dgamma : float
         Change in the plastic multiplier gamma
 
     Note
@@ -146,13 +169,13 @@ def local_const_lin_hard(Phi_trial, G, H, eps_d_trial, q_trial,
 
     """
     # solution to the constitutive equation considering linear hardening
-    dgama = Phi_trial / (3 * G + H)   # Eq. 7.101
+    dgamma = Phi_trial / (3 * G + H)   # Eq. 7.101
 
     # deviatoric stress trial
     sig_d_trial = 2 * G * eps_d_trial
 
     # update deviatoric stress, not trial anymore
-    sig_d = (1 - dgama * 3 * G / q_trial) * sig_d_trial
+    sig_d = (1 - dgamma * 3 * G / q_trial) * sig_d_trial
 
     sig_d_norm = np.sqrt(sig_d[0]**2 + sig_d[1]**2 + sig_d[3]**2 +
                          2 * sig_d[2]**2)
@@ -168,18 +191,18 @@ def local_const_lin_hard(Phi_trial, G, H, eps_d_trial, q_trial,
     eps_e[2] = 2 * eps_e[2]
 
     # update cummulative plastic strain
-    eps_bar_p = eps_bar_p + dgama
+    eps_bar_p = eps_bar_p + dgamma
 
-    eps_p = eps_p + dgama * np.sqrt(3 / 2) * sig_d / sig_d_norm
+    eps_p = eps_p + dgamma * np.sqrt(3 / 2) * sig_d / sig_d_norm
 
-    return sig, eps_e, eps_p, eps_bar_p, dgama, q
+    return sig, eps_e, eps_p, eps_bar_p, dgamma, q
 
 
-def local_constitutive_newton(max_num_local_iter,
-                              Phi_trial, eps_bar_p, q_trial,
-                              p, eps_d_trial, eps_v_trial, eps_p,
-                              G, H, sig_y0,  # material parameters
-                              tol=1e-6):
+def local_constit_newton(max_num_local_iter,
+                         Phi_trial, eps_bar_p, q_trial,
+                         p, eps_d_trial, eps_v_trial, eps_p,
+                         G, H, sig_y0,  # material parameters
+                         tol=1e-6):
     """Solve the local constitutive equation for von Mises model
 
     Solve the single nonlinear equation considering the von Mises yield
@@ -200,20 +223,20 @@ def local_constitutive_newton(max_num_local_iter,
     sig : ndarray shape (3,)
     eps_e : ndarray shape (3,)
     eps_bar_p : float
-    dgama : float
+    dgamma : float
     q : float
         von Mises effective stress
 
     """
-    dgama = 0
+    dgamma = 0
     for k in range(1, max_num_local_iter):
-        # residual derivative with respect to dgama
+        # residual derivative with respect to dgamma
         # the Phi function is already in a residual form
         # TODO: right now i'm considering only linear hardening H
         dPhi_ddgama = -3 * G - H
 
         # newton-raphson iteration
-        dgama = dgama - Phi_trial / dPhi_ddgama
+        dgamma = dgamma - Phi_trial / dPhi_ddgama
 
         # new Phi (residual)
         # eps_bar_p_(n+1) = eps_bar_p_(n) + Delta_gamma,
@@ -223,13 +246,13 @@ def local_constitutive_newton(max_num_local_iter,
         sig_y = sig_y0 + H * eps_bar_p
 
         # Phi (Eq. 7.91 Neto 2008)
-        Phi = q_trial - 3 * G * dgama - sig_y
+        Phi = q_trial - 3 * G * dgamma - sig_y
 
         # check convergence
         if abs(Phi / sig_y) <= tol:
             # update accumulated plastic strain -> alread updated eps_bar_p
             # update stress
-            fact = (1 - 3 * dgama * G / q_trial)
+            fact = (1 - 3 * dgamma * G / q_trial)
             # 2 D eps_d_trial is trial deviatoric strss
             sig_d = fact * 2 * G * eps_d_trial
             sig_d_norm = np.sqrt(sig_d[0]**2 + sig_d[1]**2 + sig_d[3]**2 +
@@ -243,8 +266,8 @@ def local_constitutive_newton(max_num_local_iter,
             eps_e[2] = eps_e[2] * 2  # convert back to engineering strain
 
             # (eq. 7.87 Neto 2008)
-            eps_p = eps_p + dgama * np.sqrt(3 / 2) * sig_d / sig_d_norm
-            return sig, eps_e, eps_p, eps_bar_p, dgama, q
+            eps_p = eps_p + dgamma * np.sqrt(3 / 2) * sig_d / sig_d_norm
+            return sig, eps_e, eps_p, eps_bar_p, dgamma, q
             # break our of the NR loop
             break
     else:

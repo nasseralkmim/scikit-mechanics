@@ -23,7 +23,7 @@ def solve_partitioned(model, K_T, f_int, f_ext, increment, k):
     If nonhomogeneus Dirichlet boundary conditions are imposed, then, only in
     the first iteration of each time step they will be enforced
 
-    See Borst 2012 Section 2.5
+    See (Borst 2012 Section 2.5)
 
     """
     # Compute residual
