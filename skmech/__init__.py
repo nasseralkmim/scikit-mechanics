@@ -14,3 +14,4 @@ from .dirichlet import dirichlet
 from . import postprocess
 from . import xfem
 from .meshplotlib.plot2d import plot
+from .multiscale.micromodel import MicroModel
