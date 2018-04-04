@@ -11,7 +11,7 @@ from ..plasticity.tangentmises import consistent_tangent_mises
 from ..multiscale.microincremental import micro_incremental
 
 
-def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
+def localization(model, Delta_u, int_var,
                  max_num_local_iter):
     """Localization of fem procedure
 
@@ -72,11 +72,11 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
     f_int = np.zeros(num_dof)
     K_T = np.zeros((num_dof, num_dof))
 
-    # dictionary with local variables
-    # new every local N-R iteration
+    # dictionary with local variables for this iteration
+    # new every local Newton iteration
     # use to save converged value
-    int_var = {'eps_e': {}, 'eps': {}, 'eps_bar_p': {},
-               'dgamma': {}, 'sig': {}, 'eps_p': {}, 'q': {}}
+    int_var_iter = {'eps_e': {}, 'eps': {}, 'eps_bar_p': {},
+                    'dgamma': {}, 'sig': {}, 'eps_p': {}, 'q': {}}
 
     # Loop over elements
     for eid, [etype, *edata] in model.elements.items():
@@ -116,19 +116,20 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
 
             # elastic trial strain
             # use the previous value stored for this element and this gp
-            eps_e_trial = eps_e_n[(eid, gpid)] + Delta_eps
+            eps_e_trial = int_var['eps_e'][(eid, gpid)] + Delta_eps
 
             # trial accumulated plastic strain
             # this is only updated when converged
-            eps_bar_p_trial = eps_bar_p_n[(eid, gpid)]
+            eps_bar_p_trial = int_var['eps_bar_p'][(eid, gpid)]
 
             # plastic strain trial is from previous load step
-            eps_p_trial = eps_p_n[(eid, gpid)]
+            eps_p_trial = int_var['eps_p'][(eid, gpid)]
 
             # update internal variables for this gauss point
-            sig, int_var, ep_flag = suvm(
+            sig, int_var_iter, ep_flag = suvm(
                 E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial, eps_p_trial,
-                max_num_local_iter, model.material.case, int_var, eid, gpid)
+                max_num_local_iter, model.material.case, int_var_iter,
+                eid, gpid)
 
             # compute element internal force (gaussian quadrature)
             # sig[:3] ignore the 33 component here
@@ -138,7 +139,7 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
             # TODO: ep_flag comes from the state update? DONE
             # use dgama from previous global iteration
             D = consistent_tangent_mises(
-                dgamma_n[(eid, gpid)], sig, E, nu, H, ep_flag,
+                int_var['dgamma'][(eid, gpid)], sig, E, nu, H, ep_flag,
                 model.material.case)
             # print(D / 1e9, 'GPa')
             # element consistent tanget matrix (gaussian quadrature)
@@ -149,34 +150,4 @@ def localization(model, Delta_u, eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n,
         f_int[element.id_v] += f_int_e
         K_T[element.id_m] += k_T_e
 
-    return f_int, K_T, int_var
-
-
-def storage_int_var(int_var, eid, gpid, eps_e, eps_p, sig,
-                    eps_bar_p, q, dgamma, element):
-    """Storage internal variables
-
-    Parameters
-    ----------
-
-    Return
-    ------
-    int_var : dict
-        dictionary of interal state variables for each gauss point for
-        each element
-
-    """
-    # TODO Only update when converged! outside this function! DONE
-    # save solution of constitutive equation -> internal variables
-    # int_var is a dictionary with the internal variables
-    # each interal variable is a dictionary with a tuple key
-    # the tuple (eid, gpid) for each element and each gauss point
-    int_var['eps_e'][(eid, gpid)] = eps_e
-    int_var['eps_p'][(eid, gpid)] = eps_p
-    int_var['eps'][(eid, gpid)] = eps_e + eps_p
-    int_var['eps_bar_p'][(eid, gpid)] = eps_bar_p
-    int_var['dgamma'][(eid, gpid)] = dgamma
-    int_var['sig'][(eid, gpid)] = sig
-    int_var['q'][(eid, gpid)] = q
-
-    return int_var
+    return f_int, K_T, int_var_iter

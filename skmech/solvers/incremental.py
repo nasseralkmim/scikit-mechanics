@@ -40,7 +40,8 @@ def solver(model, time_step=.1, min_time_step=1e-3,
     # initial displacement for t_0 (n=0)
     u = np.zeros(model.num_dof)
 
-    eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n = initial_values(model)
+    int_var = initial_values(model)
+    # eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n = initial_values(model)
 
     # external load vector, only traction for now
     f_ext_bar = external_load_vector(model)
@@ -62,12 +63,9 @@ def solver(model, time_step=.1, min_time_step=1e-3,
         f_ext = lmbda * f_ext_bar
 
         # Step (2), (3)
-        f_int, K_T, int_var = localization(model, Delta_u,
-                                           eps_e_n,
-                                           eps_p_n,
-                                           eps_bar_p_n,
-                                           dgamma_n,
-                                           max_num_local_iter)
+        f_int, K_T, int_var_iter = localization(model, Delta_u,
+                                                int_var,
+                                                max_num_local_iter)
         # Begin global Newton procedures
         for k in range(0, max_num_iter + 1):
             # Step (4) Assemble global and solve for correction
@@ -80,12 +78,9 @@ def solver(model, time_step=.1, min_time_step=1e-3,
 
             # Step (6) (7) (8)
             # build internal load vector and solve local constitutive equation
-            f_int, K_T, int_var = localization(model, Delta_u,
-                                               eps_e_n,
-                                               eps_p_n,
-                                               eps_bar_p_n,
-                                               dgamma_n,
-                                               max_num_local_iter)
+            f_int, K_T, int_var_iter = localization(model, Delta_u,
+                                                    int_var,
+                                                    max_num_local_iter)
             # new residual
             r_updt = f_int - f_ext
             # compute residual norm to check equilibrium
@@ -102,8 +97,7 @@ def solver(model, time_step=.1, min_time_step=1e-3,
                 lmbda = lmbda + time_step
                 increment += 1
 
-                eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n = update_int_var(
-                    int_var)
+                int_var = update_int_var(int_var, int_var_iter)
                 save_output(model, u, int_var, increment, start, lmbda,
                             element_out, node_out)
                 break
@@ -163,64 +157,21 @@ def initial_values(model):
     # at firt iteration of each step
     # sig_n = {(eid, gp): np.zeros(3) for eid in model.elements.keys()
     # for gp in range(model.num_quad_points[eid] * 2)}
-    return eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n
+    int_var = {'eps_e': eps_e_n,
+               'eps_p': eps_p_n,
+               'eps_bar_p': eps_bar_p_n,
+               'dgamma': dgamma_n}
+    return int_var
 
 
-def update_int_var(int_var):
+def update_int_var(int_var, int_var_iter):
     """Update internal variables with iteration values"""
     # TODO: update interal variables converged DONE
-    # update elastic strain for this element for this gp
-    eps_e_n = int_var['eps_e']
-    # update plastic strain
-    eps_p_n = int_var['eps_p']
-    # update cummulative plastic strain
-    eps_bar_p_n = int_var['eps_bar_p']
-    # update incremental plastic multiplier
-    dgamma_n = int_var['dgamma']
-    # update stress, not required
-    # sig_n = int_var['sig']
-    return eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n
-
-
-if __name__ == '__main__':
-    import skmech
-
-    class Mesh():
-        pass
-
-    # 4 element with offset center node
-    msh = Mesh()
-    msh.nodes = {
-        1: [0, 0, 0],
-        2: [1, 0, 0],
-        3: [1, 1, 0],
-        4: [0, 1, 0],
-        5: [.5, 0, 0],
-        6: [1, .5, 0],
-        7: [.5, 1, 0],
-        8: [0, .5, 0],
-        9: [.4, .6]
-    }
-    msh.elements = {
-        1: [15, 2, 12, 1, 1],
-        2: [15, 2, 13, 2, 2],
-        3: [1, 2, 7, 2, 2, 6],
-        4: [1, 2, 7, 2, 6, 3],
-        7: [1, 2, 5, 4, 4, 8],
-        8: [1, 2, 5, 4, 8, 1],
-        9: [3, 2, 11, 10, 1, 5, 9, 8],
-        10: [3, 2, 11, 10, 5, 2, 6, 9],
-        11: [3, 2, 11, 10, 9, 6, 3, 7],
-        12: [3, 2, 11, 10, 8, 9, 7, 4]
-    }
-    material = skmech.Material(E={11: 10000}, nu={11: 0.3})
-    traction = {5: (-1, 0), 7: (1, 0)}
-    displacement_bc = {12: (0, 0)}
-
-    model = skmech.Model(
-        msh,
-        material=material,
-        traction=traction,
-        imposed_displ=imposed_displacement,
-        displacement_bc=displacement_bc,
-        num_quad_points=2)
+    int_var['eps_e'] = int_var_iter['eps_e'].copy()
+    int_var['eps_p'] = int_var_iter['eps_p'].copy()
+    int_var['eps'] = int_var_iter['eps'].copy()
+    int_var['eps_bar_p'] = int_var_iter['eps_bar_p'].copy()
+    int_var['dgamma'] = int_var_iter['dgamma'].copy()
+    int_var['sig'] = int_var_iter['sig'].copy()
+    int_var['q'] = int_var_iter['q'].copy()
+    return int_var
