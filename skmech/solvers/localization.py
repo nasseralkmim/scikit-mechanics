@@ -125,23 +125,34 @@ def localization(model, Delta_u, int_var,
             # plastic strain trial is from previous load step
             eps_p_trial = int_var['eps_p'][(eid, gpid)]
 
-            # update internal variables for this gauss point
-            sig, int_var_iter, ep_flag = suvm(
-                E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial, eps_p_trial,
-                max_num_local_iter, model.material.case, int_var_iter,
-                eid, gpid)
+            if model.micromodel is not None:
+                # macroscopic strain
+                # eps_{n+1}^{k+1} = B @ (u_n + Delta_u^{k+1})
+                # B @ u_n = eps_{n} = int_var['eps'] previously converged
+                eps_mac = int_var['eps'][(eid, gpid)] + Delta_eps
+
+                sig, D, int_var_iter = micro_incremental(
+                    model.micromodel, Delta_eps, eps_mac, int_var_iter,
+                    int_var, max_num_local_iter)
+                int_var_iter = update_macro_variables(int_var_iter,
+                                                      sig, D, eid, gpid)
+            else:
+                # update internal variables for this gauss point
+                sig, int_var_iter, ep_flag = suvm(
+                    E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial,
+                    eps_p_trial, max_num_local_iter, int_var_iter,
+                    eid, gpid)
+
+                # TODO: material properties from element, E, nu, H DONE
+                # TODO: ep_flag comes from the state update? DONE
+                # use dgama from previous global load step!
+                D = consistent_tangent_mises(
+                    int_var['dgamma'][(eid, gpid)], sig, E, nu, H, ep_flag)
 
             # compute element internal force (gaussian quadrature)
             # sig[:3] ignore the 33 component here
             f_int_e += B.T @ sig[:3] * (dJ * w * element.thickness)
 
-            # TODO: material properties from element, E, nu, H DONE
-            # TODO: ep_flag comes from the state update? DONE
-            # use dgama from previous global iteration
-            D = consistent_tangent_mises(
-                int_var['dgamma'][(eid, gpid)], sig, E, nu, H, ep_flag,
-                model.material.case)
-            # print(D / 1e9, 'GPa')
             # element consistent tanget matrix (gaussian quadrature)
             k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
 
@@ -151,3 +162,23 @@ def localization(model, Delta_u, int_var,
         K_T[element.id_m] += k_T_e
 
     return f_int, K_T, int_var_iter
+
+
+def update_macro_variables(int_var_iter, sig, D, eid, gpid):
+    """Update macro variables with micro results """
+    int_var_iter['sig'][(eid, gpid)] = sig
+    if len(int_var_iter['sig'][(eid, gpid)]) != 4:
+        int_var_iter['sig'][(eid, gpid)] = np.append(
+            int_var_iter['sig'][(eid, gpid)], 0)
+    int_var_iter['sig'][(eid, gpid)][3] = .25 * sig[0] + .25 * sig[1]
+    int_var_iter['eps'][(eid, gpid)] = np.linalg.solve(D, sig)
+    if len(int_var_iter['eps'][(eid, gpid)]) != 4:
+        int_var_iter['eps'][(eid, gpid)] = np.append(
+            int_var_iter['eps'][(eid, gpid)], 0)
+    int_var_iter['eps_e'][(eid, gpid)] = int_var_iter['eps'][(eid, gpid)]
+    if len(int_var_iter['eps_e'][(eid, gpid)]) != 4:
+        int_var_iter['eps_e'][(eid, gpid)] = np.append(
+            int_var_iter['eps_e'][(eid, gpid)], 0)
+    int_var_iter['eps_bar_p'][(eid, gpid)] = 0
+    int_var_iter['eps_p'][(eid, gpid)] = int_var_iter['eps'][(eid, gpid)]
+    return int_var_iter

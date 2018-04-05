@@ -3,7 +3,7 @@ import numpy as np
 
 
 def consistent_tangent_mises(dgama, sig, E, nu, H, elastoplastic_flag,
-                             material_case):
+                             material_case='strain'):
     """Build the consistent tangent matrix consideirng von Mises (ctvm)
 
     Parameters

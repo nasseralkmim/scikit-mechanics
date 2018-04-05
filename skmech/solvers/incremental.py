@@ -1,11 +1,8 @@
 """Solves the incremental problem"""
 import numpy as np
 import time
-from ..dirichlet import imposed_displacement
 from ..neumann import neumann
-from .localization import localization
-from ..postprocess.saveoutput import save_output
-from .partitioned import solve_partitioned
+from .increment import increment_step
 
 
 def solver(model, time_step=.1, min_time_step=1e-3,
@@ -41,7 +38,11 @@ def solver(model, time_step=.1, min_time_step=1e-3,
     u = np.zeros(model.num_dof)
 
     int_var = initial_values(model)
-    # eps_e_n, eps_p_n, eps_bar_p_n, dgamma_n = initial_values(model)
+
+    if model.micromodel is not None:
+        # add microscale variables into int_var dict
+        int_var = model.micromodel.set_internal_var(
+            int_var)
 
     # external load vector, only traction for now
     f_ext_bar = external_load_vector(model)
@@ -58,55 +59,18 @@ def solver(model, time_step=.1, min_time_step=1e-3,
             if increment >= len(model.imposed_displ):
                 break
 
-        # initial displacement increment for each load step
-        Delta_u = np.zeros(model.num_dof)
         f_ext = lmbda * f_ext_bar
 
-        # Step (2), (3)
-        f_int, K_T, int_var_iter = localization(model, Delta_u,
-                                                int_var,
-                                                max_num_local_iter)
-        # Begin global Newton procedures
-        for k in range(0, max_num_iter + 1):
-            # Step (4) Assemble global and solve for correction
-            newton_correction, f_ext = solve_partitioned(
-                model, K_T, f_int, f_ext, increment, k)
+        # perform an increment and update displacement and internal variables
+        u, int_var = increment_step(model, u, int_var, f_ext,
+                                    max_num_iter, max_num_local_iter,
+                                    increment, tol, lmbda, start,
+                                    element_out, node_out)
 
-            # Step (5) Update solutions
-            Delta_u += newton_correction
-            u += newton_correction
+        # add to time step
+        lmbda = lmbda + time_step
+        increment += 1
 
-            # Step (6) (7) (8)
-            # build internal load vector and solve local constitutive equation
-            f_int, K_T, int_var_iter = localization(model, Delta_u,
-                                                    int_var,
-                                                    max_num_local_iter)
-            # new residual
-            r_updt = f_int - f_ext
-            # compute residual norm to check equilibrium
-            r_norm = np.linalg.norm(r_updt)
-
-            print(f'Iteration {k + 1} residual norm {r_norm:.1e}')
-
-            if r_norm <= tol:
-                # solution converged +1 because it started in 0
-                print(f'Converged with {k + 1} iterations '
-                      f'residual norm {r_norm:.1e}')
-
-                # add to time step
-                lmbda = lmbda + time_step
-                increment += 1
-
-                int_var = update_int_var(int_var, int_var_iter)
-                save_output(model, u, int_var, increment, start, lmbda,
-                            element_out, node_out)
-                break
-            else:
-                # did't converge, continue to next global iteration
-                continue
-        else:
-            raise Exception(f'Solution did not converge at time step '
-                            f'{increment + 1} after {k} iterations')
     end = time.time()
     print(f'Solution finished in {end - start:.3f}s')
     return None
@@ -158,20 +122,9 @@ def initial_values(model):
     # sig_n = {(eid, gp): np.zeros(3) for eid in model.elements.keys()
     # for gp in range(model.num_quad_points[eid] * 2)}
     int_var = {'eps_e': eps_e_n,
+               'eps': eps_e_n,
                'eps_p': eps_p_n,
                'eps_bar_p': eps_bar_p_n,
                'dgamma': dgamma_n}
     return int_var
 
-
-def update_int_var(int_var, int_var_iter):
-    """Update internal variables with iteration values"""
-    # TODO: update interal variables converged DONE
-    int_var['eps_e'] = int_var_iter['eps_e'].copy()
-    int_var['eps_p'] = int_var_iter['eps_p'].copy()
-    int_var['eps'] = int_var_iter['eps'].copy()
-    int_var['eps_bar_p'] = int_var_iter['eps_bar_p'].copy()
-    int_var['dgamma'] = int_var_iter['dgamma'].copy()
-    int_var['sig'] = int_var_iter['sig'].copy()
-    int_var['q'] = int_var_iter['q'].copy()
-    return int_var

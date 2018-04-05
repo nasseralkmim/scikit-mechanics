@@ -4,7 +4,7 @@ import numpy as np
 
 def state_update_mises(E, nu, H, sig_y0,
                        eps_e_trial, eps_bar_p_trial, eps_p_trial,
-                       max_num_local_iter, material_case,
+                       max_num_local_iter,
                        int_var, eid, gpid):
     """State update procedure considering von Mises yield criterion
 
