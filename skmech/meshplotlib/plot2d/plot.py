@@ -209,10 +209,11 @@ def deformed(nodes, elements, displ, ax, magf=1, element_color='red'):
     ax.set_aspect('equal')
 
 
-def geometry(nodes, elements, ax):
+def geometry(nodes, elements, ax, factor=1, **kwargs):
     """plot geometry
     """
-    elements2d(nodes, elements, ax, color='k')
+    elements2d(nodes, elements, ax, color='k',
+               factor=factor, **kwargs)
     # recompute the ax.dataLim
     ax.relim()
     # update ax.viewLim using the new dataLim

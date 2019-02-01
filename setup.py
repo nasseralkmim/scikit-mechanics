@@ -6,9 +6,9 @@ except ImportError:
 setup(name='scikit-mechanics',
       version='0.1-dev',
       description='Suit for solving mechanics problems',
-      long_description=open('README.rst').read(),
+      long_description=open('README.org').read(),
       license='GPLv3',
       author='The scikit-mechanics contributors',
       packages=['skmech'],
-      install_requires=["numpy", "matplotlib"]
+      install_requires=["numpy", "matplotlib", "scipy", "scikit-fmm"]
       )

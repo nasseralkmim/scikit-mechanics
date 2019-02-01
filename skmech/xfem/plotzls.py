@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_zls(zls, ax, plot_cbar=True, **kwargs):
+def plot_zls(zls, ax, plot_cbar=True, factor=1, **kwargs):
     """plot 2d level set with zlsmask
 
     Parameters
@@ -24,8 +24,9 @@ def plot_zls(zls, ax, plot_cbar=True, **kwargs):
         zlsmask = zls.mask
         X, Y = zls.grid_x, zls.grid_y
 
-    ax.contour(X, Y, zlsmask, levels=[0], **kwargs)
-    c = ax.contourf(X, Y, zlsmask)
+    # ax.contour(X * factor, Y * factor,
+    #            zlsmask, levels=[0], **kwargs)
+    c = ax.contourf(X * factor, Y * factor, zlsmask)
     if plot_cbar:
         cbar = plt.colorbar(c)
         if np.max(zlsmask) == 1 and np.min(zlsmask) == -1:

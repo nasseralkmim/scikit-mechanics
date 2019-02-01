@@ -30,6 +30,10 @@ class Quad4(Element):
         self.num_nodes = len(self.conn)
         self.thickness = model.thickness
 
+        # prototype
+        self.microscale = model.microscale
+        self.homogenized_c = model.homogenized_c
+
     def _get_incidence(self):
         """get matrix and vector incidence arrays to allocate element values"""
         dof = np.array(self.dof) - 1  # numpy starts at 0
@@ -299,7 +303,7 @@ class Quad4(Element):
             C = self.c_matrix(N, t)
             B = self.gradient_operator(dN_xi)
             k += w * (B.T @ C @ B) * dJ
-        K[self.id_m] = k * self.thickness
+        K[self.id_m] = k # * self.thickness
         return K
 
     def gradient_operator(self, dN_xi):
@@ -347,32 +351,35 @@ class Quad4(Element):
             Check if E is given as a function, as a list or as a float.
 
         """
-        if callable(self.E):
-            x, y = self.mapping(N, self.xyz)
-            E = self.E(x, y)
-        elif type(self.E) is list:
-            # interpolate using shape functions
-            E = N @ self.E
+        if self.microscale is True:
+            C = self.homogenized_c
         else:
-            E = self.E
+            if callable(self.E):
+                x, y = self.mapping(N, self.xyz)
+                E = self.E(x, y)
+            elif type(self.E) is list:
+                # interpolate using shape functions
+                E = N @ self.E
+            else:
+                E = self.E
 
-        if type(self.nu) is list:
-            nu = N @ self.nu
-        else:
-            nu = self.nu
+            if type(self.nu) is list:
+                nu = N @ self.nu
+            else:
+                nu = self.nu
 
-        # convert elastic properties
-        if self.case == 'strain':
-            E = E / (1 - nu**2)
-            nu = nu / (1 - nu)
-
-        C = np.zeros((3, 3))
-        C[0, 0] = 1.0
-        C[1, 1] = 1.0
-        C[1, 0] = nu
-        C[0, 1] = nu
-        C[2, 2] = (1.0 - nu) / 2.0
-        C = (E / (1.0 - nu**2.0)) * C
+            # convert elastic properties
+            if self.case == 'strain':
+                E = E / (1 - nu**2)
+                nu = nu / (1 - nu)
+            
+            C = np.zeros((3, 3))
+            C[0, 0] = 1.0
+            C[1, 1] = 1.0
+            C[1, 0] = nu
+            C[0, 1] = nu
+            C[2, 2] = (1.0 - nu) / 2.0
+            C = (E / (1.0 - nu**2.0)) * C
 
         return C
 

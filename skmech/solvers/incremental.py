@@ -6,8 +6,8 @@ from .increment import increment_step
 
 
 def solver(model, time_step=.1, min_time_step=1e-3,
-           max_num_iter=15, tol=1e-6,
-           max_num_local_iter=100,
+           max_num_iter=15, tol=1e-3,
+           max_num_local_iter=10,
            element_out=None, node_out=None):
     """Performes the incremental solution of linearized virtual work equation
 
@@ -20,6 +20,10 @@ def solver(model, time_step=.1, min_time_step=1e-3,
     min_time_step : float (1e-3)
         minimum time step allowed when the step is divided when the number of
         iterations is greater than max_num_iteration
+    max_num_iter : int 
+        number of iterations for the Newton method, rule of thumb 8 (Borst 2012)
+    max_num_local_iter : int
+        number of iterations for the local (constitutive) Newton method
 
     Note
     ----
@@ -35,21 +39,18 @@ def solver(model, time_step=.1, min_time_step=1e-3,
     print('Starting incremental solver')
 
     # initial displacement for t_0 (n=0)
+    # Start from rest state
     u = np.zeros(model.num_dof)
 
+    # initialize internal variables
     int_var = initial_values(model)
-
-    if model.micromodel is not None:
-        # add microscale variables into int_var dict
-        int_var = model.micromodel.set_internal_var(
-            int_var)
 
     # external load vector, only traction for now
     f_ext_bar = external_load_vector(model)
 
     increment, lmbda = 0, 0
     # Loop over load increments
-    while lmbda <= 1 + tol:
+    while lmbda <= 1 + 1e-6:
         print('--------------------------------------')
         print(f'Load factor {lmbda:.4f} increment {increment}')
         print('--------------------------------------')
@@ -99,6 +100,7 @@ def initial_values(model):
     component, because even though the total strain eps_33 = 0, the elastic
     and platic parts are not, See (p. 761 Neto 2008)
 
+    The initial value is zero for all elements for all gauss points
     """
     # initial elastic strain for each element gauss point
     # TODO: fixed for 4 gauss point for now
@@ -126,5 +128,11 @@ def initial_values(model):
                'eps_p': eps_p_n,
                'eps_bar_p': eps_bar_p_n,
                'dgamma': dgamma_n}
-    return int_var
+    
+    if model.micromodel is not None:
+        # add microscale variables into int_var dict
+        # use the same dictionary
+        int_var = model.micromodel.set_internal_var(
+            int_var, macromodel=model)
 
+    return int_var

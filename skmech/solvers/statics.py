@@ -30,7 +30,6 @@ def solver(model, t=1):
         # pe = element.load_strain_vector(t)
         K += k
         # P += pb + pe
-
     Pt = neumann(model)
     P = P + Pt
     Km, Pm = dirichlet(K, P, model)

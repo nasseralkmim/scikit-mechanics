@@ -9,10 +9,11 @@ from ..constructor import constructor
 from ..plasticity.stateupdatemises import state_update_mises as suvm
 from ..plasticity.tangentmises import consistent_tangent_mises
 from ..multiscale.microincremental import micro_incremental
+from ..postprocess.saveoutput import save_output
 
 
-def localization(model, Delta_u, int_var,
-                 max_num_local_iter):
+def localization(model, Delta_u, int_var, max_num_local_iter,
+                 increment, start, lmbda):
     """Localization of fem procedure
 
     Parameters
@@ -47,7 +48,7 @@ def localization(model, Delta_u, int_var,
     ----
     Reference Eq. 4.65 (1) Neto 2008
 
-    Find the stress for a fiven displacement u, then multiply the stress for
+    Find the stress for a given displacement u, then multiply the stress for
     the strain-displacement matrix trasnpose and integrate it over domain.
 
     Procedure:
@@ -75,8 +76,15 @@ def localization(model, Delta_u, int_var,
     # dictionary with local variables for this iteration
     # new every local Newton iteration
     # use to save converged value
-    int_var_iter = {'eps_e': {}, 'eps': {}, 'eps_bar_p': {},
-                    'dgamma': {}, 'sig': {}, 'eps_p': {}, 'q': {}}
+    int_var_trial = {'eps_e': {}, 'eps': {}, 'eps_bar_p': {},
+                     'dgamma': {}, 'sig': {}, 'eps_p': {}, 'q': {}}
+
+    if model.micromodel is not None:
+        # every localization step we need to reset internal micro
+        # variabls
+        # save only after macro solution converged
+        int_var_trial = model.micromodel.set_internal_var(
+            int_var_trial , model)
 
     # Loop over elements
     for eid, [etype, *edata] in model.elements.items():
@@ -107,6 +115,8 @@ def localization(model, Delta_u, int_var,
             # build element strain-displacement matrix shape (3, 8)
             N, dN_ei = element.shape_function(xez=gp)
             dJ, dN_xi, _ = element.jacobian(element.xyz, dN_ei)
+            # TODO: XFEM affects here, reqwrite the method for the enriched
+            # element class
             B = element.gradient_operator(dN_xi)
 
             # compute strain increment from
@@ -124,61 +134,82 @@ def localization(model, Delta_u, int_var,
 
             # plastic strain trial is from previous load step
             eps_p_trial = int_var['eps_p'][(eid, gpid)]
-
+            
             if model.micromodel is not None:
-                # macroscopic strain
-                # eps_{n+1}^{k+1} = B @ (u_n + Delta_u^{k+1})
-                # B @ u_n = eps_{n} = int_var['eps'] previously converged
-                eps_mac = int_var['eps'][(eid, gpid)] + Delta_eps
-
-                sig, D, int_var_iter = micro_incremental(
-                    model.micromodel, Delta_eps, eps_mac, int_var_iter,
-                    int_var, max_num_local_iter)
-                int_var_iter = update_macro_variables(int_var_iter,
-                                                      sig, D, eid, gpid)
-            else:
-                # update internal variables for this gauss point
-                sig, int_var_iter, ep_flag = suvm(
-                    E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial,
-                    eps_p_trial, max_num_local_iter, int_var_iter,
+                # Multiscale analysis for this element for this gauss point
+                print(f'Element {eid} Gauss Point {gpid} ', end='')
+                sig, D, int_var_trial = micro_incremental(
+                    model.micromodel, Delta_eps,
+                    int_var_trial,
+                    int_var,
+                    max_num_local_iter,
                     eid, gpid)
 
-                # TODO: material properties from element, E, nu, H DONE
-                # TODO: ep_flag comes from the state update? DONE
+                # scale transition
+                # update macro internal variables using micro variables
+                # int_var_trial will update int_var only when macro converge
+                int_var_trial = update_macro_variables(int_var_trial,
+                                                       sig, D, nu, eid, gpid)
+
+                # save the macrostrain for this Newton itaration
+                # this will be used when the macro solution converged so we
+                # can compute the micro displacement field
+                # only keep the last one which is the converged value
+                model.micromodel.Delta_eps_mac[(eid, gpid)] = Delta_eps
+            else:
+                # update internal variables for this gauss point
+                sig, int_var_trial, ep_flag = suvm(
+                    E, nu, H, sig_y0, eps_e_trial, eps_bar_p_trial,
+                    eps_p_trial, max_num_local_iter, int_var_trial,
+                    eid, gpid)
+
                 # use dgama from previous global load step!
                 D = consistent_tangent_mises(
                     int_var['dgamma'][(eid, gpid)], sig, E, nu, H, ep_flag)
 
             # compute element internal force (gaussian quadrature)
             # sig[:3] ignore the 33 component here
-            f_int_e += B.T @ sig[:3] * (dJ * w * element.thickness)
+            # ignore thickness, considering constant over all elements
+            # in the xfem there will be a Benr and Bstd
+            f_int_e += B.T @ sig[:3] * (dJ * w) # * element.thickness)
 
             # element consistent tanget matrix (gaussian quadrature)
-            k_T_e += B.T @ D @ B * (dJ * w * element.thickness)
+            k_T_e += B.T @ D @ B * (dJ * w) # * element.thickness)
 
         # Build global matrices outside the quadrature loop
         # += because elements can share same dof
         f_int[element.id_v] += f_int_e
         K_T[element.id_m] += k_T_e
 
-    return f_int, K_T, int_var_iter
+    return f_int, K_T, int_var_trial
 
 
-def update_macro_variables(int_var_iter, sig, D, eid, gpid):
+
+def update_macro_variables(int_var_trial, sig, D, nu, eid, gpid):
     """Update macro variables with micro results """
-    int_var_iter['sig'][(eid, gpid)] = sig
-    if len(int_var_iter['sig'][(eid, gpid)]) != 4:
-        int_var_iter['sig'][(eid, gpid)] = np.append(
-            int_var_iter['sig'][(eid, gpid)], 0)
-    int_var_iter['sig'][(eid, gpid)][3] = .25 * sig[0] + .25 * sig[1]
-    int_var_iter['eps'][(eid, gpid)] = np.linalg.solve(D, sig)
-    if len(int_var_iter['eps'][(eid, gpid)]) != 4:
-        int_var_iter['eps'][(eid, gpid)] = np.append(
-            int_var_iter['eps'][(eid, gpid)], 0)
-    int_var_iter['eps_e'][(eid, gpid)] = int_var_iter['eps'][(eid, gpid)]
-    if len(int_var_iter['eps_e'][(eid, gpid)]) != 4:
-        int_var_iter['eps_e'][(eid, gpid)] = np.append(
-            int_var_iter['eps_e'][(eid, gpid)], 0)
-    int_var_iter['eps_bar_p'][(eid, gpid)] = 0
-    int_var_iter['eps_p'][(eid, gpid)] = int_var_iter['eps'][(eid, gpid)]
-    return int_var_iter
+    int_var_trial['sig'][(eid, gpid)] = sig
+    # add zz component
+    # if len(int_var_trial['sig'][(eid, gpid)]) != 4:
+    #     int_var_trial['sig'][(eid, gpid)] = np.append(
+    #         int_var_trial['sig'][(eid, gpid)], 0)
+    # # zz component for plane strain = nu (sig11 + sig22)
+    # int_var_trial['sig'][(eid, gpid)][3] = 0.25 * (sig[0] + sig[1])
+
+    # TODO this seems to be wrong, How to compute macro strain DONE It is right
+    # use sig = D : eps with homogenized tangent and homogenized stress
+    # D is the tangent constitutive operator
+    int_var_trial['eps'][(eid, gpid)] = np.linalg.solve(D, sig[:3])
+    if len(int_var_trial['eps'][(eid, gpid)]) != 4:
+        int_var_trial['eps'][(eid, gpid)] = np.append(
+            int_var_trial['eps'][(eid, gpid)], 0)
+
+    int_var_trial['eps_e'][(eid, gpid)] = int_var_trial['eps'][(eid, gpid)]
+    if len(int_var_trial['eps_e'][(eid, gpid)]) != 4:
+        int_var_trial['eps_e'][(eid, gpid)] = np.append(
+            int_var_trial['eps_e'][(eid, gpid)], 0)
+
+    # Assume that the macroscale is elastic
+    int_var_trial['eps_bar_p'][(eid, gpid)] = 0
+    int_var_trial['eps_p'][(eid, gpid)] = np.zeros(3)
+
+    return int_var_trial

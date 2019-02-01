@@ -4,7 +4,7 @@ import os
 
 
 def write_field(field_value, mesh_file, field_name, ndim,
-                time_value, time_step, exe_time,
+                time_value=1, time_step=1, exe_time=1,
                 datatype='Node'):
     """Write vector field output file
 

@@ -25,9 +25,10 @@ class Model(object):
 
     """
     def __init__(self, mesh, material=None, traction=None,
-                 displacement_bc=None, body_forces=None, zerolevelset=None,
-                 imposed_displ=None,
+                 displacement_bc=None, body_forces=None,
+                 zerolevelset=None, imposed_displ=None,
                  num_quad_points=2, thickness=1., etypes=[3],
+                 micromodel=None,
                  microscale=False, homogenized_c=None):
         self.mesh = mesh
         self.material = material
@@ -50,6 +51,7 @@ class Model(object):
         self.num_nodes = len(self.mesh.nodes)
         self.num_dof_node = self._get_number_dof()
         self.num_dof = self.num_nodes * self.num_dof_node
+        self.num_dof_reg = self.num_dof
 
         # TODO: maybe a Node class will be useful
         # too many node related attributes:
@@ -65,6 +67,12 @@ class Model(object):
             self.xfem = Xfem(self.nodes, self.elements,
                              zerolevelset, material)
             self.num_dof = self.xfem.num_dof            # update num dof
+
+        # aggregate micromodel object to model class
+        if micromodel is None:
+            self.micromodel = None
+        else:
+            self.micromodel = micromodel
 
         # Temporary prototype
         self.microscale = microscale
@@ -105,7 +113,8 @@ class Model(object):
 
         id_f = [dof[i] - 1 for i in [0, 1] for dof in self.nodes_dof.values()
                 if dof[i] - 1 not in id_r]
-        return id_f, id_r
+        # set for getting only unique dofs
+        return id_f, list(set(id_r))
 
     def update_free_restrained_dof(self, increment):
         """Update the free and restrained dof arrays

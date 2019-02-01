@@ -26,6 +26,25 @@ def constructor(eid, etype, model):
                     model.material.nu[phy_surf] = model.xfem.material.nu[1]
                 return Quad4(eid, model)
         else:
-            return Quad4(eid, model)
+            if model.micromodel is not None:
+                # if mulsticale analys set any material parameter
+                # in multiscale analysis there is no need for specifiying
+                # material in the macro model
+
+                class Material:
+                    pass
+                phy_surf = model.elements[eid][2]
+                model.material = Material
+                model.material.case = 'strain'
+                model.material.E, model.material.nu = {}, {}
+                model.material.H, model.material.sig_y0 = {}, {}
+                model.material.E[phy_surf] = 1
+                model.material.nu[phy_surf] = 0
+                model.material.H[phy_surf] = 0
+                model.material.sig_y0[phy_surf] = 0
+                return Quad4(eid, model)
+            else:
+                # regular analysis
+                return Quad4(eid, model)
     else:
         raise Exception('Element not implemented yet!')

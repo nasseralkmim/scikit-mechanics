@@ -53,6 +53,10 @@ class Quad4Enr(Quad4):
         self.num_std_dof = 2 * len(self.conn)        # FOR QUAD ONLY
         self.num_enr_dof = len(self.dof) - self.num_std_dof
 
+        # prototype
+        self.microscale = model.microscale
+        self.homogenized_c = model.homogenized_c
+
     # TODO: numbering of nodes in element DONE
     def _get_dof(self, nodes_dof):
         """get dof list from connectivity nodes tag
@@ -164,7 +168,7 @@ class Quad4Enr(Quad4):
 
         k = np.block([[kuu, kua],
                       [kua.T, kaa]])
-        K[self.id_m] = k * self.thickness
+        K[self.id_m] = k #* self.thickness
         return K
 
     def enriched_gradient_operator(self, N, dN_xi):

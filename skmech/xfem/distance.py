@@ -33,7 +33,9 @@ def distance(zero_ls, grid_x, grid_y, xyz):
     try:
         dist = skfmm.distance(zero_ls, dx=[1 / (dx - 1), 1 / (dy - 1)])
     except ValueError:
-        print('Adjust the grid resolution of the zero level set')
+        raise Exception('Adjust the grid resolution of the zero level set'
+                        ' or function does not have a zero level set')
+
     # values shape (n,) at points shape (n, D) D is dimensions
     values = np.ndarray.flatten(dist)
     # points showld have shape (n, D) n is the number of samples
