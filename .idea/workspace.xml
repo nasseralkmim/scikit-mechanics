@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="8e6e8974-dd04-4834-9800-3f0b851b99b3" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.org" beforeDir="false" afterPath="$PROJECT_DIR$/README.org" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/docs/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/docs/conf.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/make.bat" beforeDir="false" afterPath="$PROJECT_DIR$/docs/make.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/modules.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/modules.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.elements.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.elements.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.mesh.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.mesh.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.meshplotlib.gmshio.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.meshplotlib.gmshio.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.meshplotlib.plot2d.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.meshplotlib.plot2d.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.meshplotlib.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.meshplotlib.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.postprocess.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.postprocess.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.quadrature.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.quadrature.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.solvers.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.solvers.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.test.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.test.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.xfem.enrichments.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.xfem.enrichments.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/skmech.xfem.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/skmech.xfem.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/imposed_displacement.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/imposed_displacement.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/imposed_traction.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/imposed_traction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/constructor.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/constructor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/dirichlet.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/dirichlet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/element.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/element.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/elements/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/elements/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/elements/line2.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/elements/line2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/elements/quad4.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/elements/quad4.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/elements/quad4enr.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/elements/quad4enr.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/elements/quad8.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/elements/quad8.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/material.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/material.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/mesh/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/mesh/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/mesh/gmsh.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/mesh/gmsh.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/mesh/gmsh_reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/mesh/gmsh_reader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/mesh/mesh.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/mesh/mesh.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/gmshio/gmshio.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/gmshio/gmshio.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/boundarylines2dlabel.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/boundarylines2dlabel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/elements2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/elements2d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/elements2dlabel.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/elements2dlabel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/field2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/field2d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/line2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/line2d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/nodes2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/nodes2d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/nodes2dlabel.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/nodes2dlabel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/plot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/surfaces2dlabel.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/meshplotlib/plot2d/surfaces2dlabel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/neumann.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/neumann.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/newmark.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/newmark.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/plasticity/stateupdatemises.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/plasticity/stateupdatemises.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/plasticity/tangentmises.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/plasticity/tangentmises.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/displacement.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/displacement.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/dof2node.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/dof2node.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/draw.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/draw.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/filterresults.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/filterresults.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/plotter.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/plotter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/saveoutput.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/saveoutput.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/stressrecovery.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/stressrecovery.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/postprocess/writeoutput.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/postprocess/writeoutput.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/quadrature/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/quadrature/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/quadrature/quadrilateral.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/quadrature/quadrilateral.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/solvers/dynamics.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/solvers/dynamics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/solvers/increment.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/solvers/increment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/solvers/incremental.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/solvers/incremental.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/solvers/localization.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/solvers/localization.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/solvers/partitioned.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/solvers/partitioned.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/solvers/statics.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/solvers/statics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/test/test_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/test/test_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/test/test_quad4.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/test/test_quad4.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/test/test_quad4enr.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/test/test_quad4enr.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/test/test_quad8.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/test/test_quad8.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/test/test_xfem.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/test/test_xfem.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/distance.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/distance.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/enrichments/ramp.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/enrichments/ramp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/plotenrichednodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/plotenrichednodes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/plotzls.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/plotzls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/postprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/postprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/xfem.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/xfem.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/skmech/xfem/zerolevelset.py" beforeDir="false" afterPath="$PROJECT_DIR$/skmech/xfem/zerolevelset.py" afterDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/skmech/multiscale/micromodel.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="432">
+              <caret line="107" column="36" selection-start-line="107" selection-start-column="36" selection-end-line="107" selection-end-column="36" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="210" />
+    <option name="width" value="978" />
+    <option name="height" value="1039" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <showMembers ProjectPane="true" />
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="Scope" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="scikit-mechanics" type="b2602c69:ProjectViewProjectNode" />
+              <item name="scikit-mechanics" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="scikit-mechanics" type="b2602c69:ProjectViewProjectNode" />
+              <item name="scikit-mechanics" type="462c0819:PsiDirectoryNode" />
+              <item name="skmech" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="scikit-mechanics" type="b2602c69:ProjectViewProjectNode" />
+              <item name="scikit-mechanics" type="462c0819:PsiDirectoryNode" />
+              <item name="skmech" type="462c0819:PsiDirectoryNode" />
+              <item name="multiscale" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="8e6e8974-dd04-4834-9800-3f0b851b99b3" name="Default Changelist" comment="" />
+      <created>1547810344170</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1547810344170</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-7" y="-7" width="1550" height="838" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info id="Favorites" side_tool="true" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.24983476" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Version Control" />
+      <window_info anchor="bottom" id="Python Console" />
+      <window_info anchor="bottom" id="Terminal" />
+      <window_info anchor="bottom" id="Event Log" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout>
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/#setup.py#">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/skmech/multiscale/micromodel.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="432">
+          <caret line="107" column="36" selection-start-line="107" selection-start-column="36" selection-end-line="107" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>
